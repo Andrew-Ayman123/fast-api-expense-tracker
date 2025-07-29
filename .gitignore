@@ -1,11 +1,10 @@
 .venv/
-.env            # Environment variable definitions (may contain secrets)
+.env
 
 .coverage       
 htmlcov/
 
-
-.vscode/        
+.vscode/
 
 __pycache__    # Python bytecode cache
 *.pyc           
