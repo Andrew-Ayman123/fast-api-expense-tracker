@@ -7,7 +7,7 @@ import uuid
 
 from sqlalchemy import DateTime, String
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
 from app.models.shared_base_model import Base
@@ -38,5 +38,3 @@ class UserModel(Base):
         server_default=func.now(),
         onupdate=func.now(),
     )
-
-    todos = relationship("TodoListModel", back_populates="user")
