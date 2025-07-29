@@ -13,7 +13,6 @@ from alembic import context
 from app.models.shared_base_model import Base  # shared DeclarativeBase
 
 # list of models to import for Alembic migrations (unused but needs to see them)
-from app.models.todo_model import TodoListItemModel, TodoListModel  # noqa: F401
 from app.models.user_model import UserModel  # noqa: F401
 
 # this is the Alembic Config object, which provides
