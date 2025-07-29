@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: todo_db
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+        ports:
+          - 6000:5432
+        options: >-
+          --health-cmd "pg_isready -U user -d todo_db"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Load env file manually
+        run: |
+          cat pytest.env >> $GITHUB_ENV
+      - name: Install uv
+        run: |
+          pip install uv
+      - name: Install project dependencies with uv
+        run: |
+          uv venv .venv
+          source .venv/bin/activate
+          uv pip install -e .
+          uv pip install pytest pytest-cov pre-commit alembic
+      - name: Run migrations
+        run: |
+          source .venv/bin/activate
+          alembic -x url=$DATABASE_URL_ALEMBIC upgrade head
+      - name: Run pytest with coverage
+        run: |
+          source .venv/bin/activate
+          pytest -s --cov=app --cov-report=xml --cov-report=term tests/
+      - name: Check coverage >= 80%
+        run: |
+          source .venv/bin/activate
+          coverage report --fail-under=80
+      - name: Run pre-commit checks
+        run: |
+          source .venv/bin/activate
+          pre-commit run --all-files
