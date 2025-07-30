@@ -2,6 +2,9 @@
 
 ## Setup
 
+### Pre-requistes:
+- Python 3.10+ Installed
+
 ### 1. Install `uv` and create a virtual environment
 
 #### On **Linux** (Ubuntu):
@@ -116,3 +119,16 @@ alembic -x url=$DATABASE_URL_ALEMBIC upgrade head
 ```bash
 uv run run.py
 ```
+
+### 9. Install VS-Code extensions (Optional)
+
+#### On **Linux**:
+```bash
+cat vscode-extensions.txt | xargs -n 1 code --install-extension
+```
+
+#### On **Windows** (PowerShell):
+```powershell
+Get-Content vscode-extensions.txt | ForEach-Object { code --install-extension $_ }
+```
+---
