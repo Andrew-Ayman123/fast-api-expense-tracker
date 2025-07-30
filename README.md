@@ -95,7 +95,7 @@ if (Test-Path ".env") {
 #### On **Linux**:
 ```bash
 docker run -d \
-    --name postgres-todo \
+    --name postgres-expense-tracker \
     -e POSTGRES_DB=$DATABASE_NAME \
     -e POSTGRES_USER=$DATABASE_USER \
     -e POSTGRES_PASSWORD=$DATABASE_PASSWORD \
@@ -106,7 +106,7 @@ docker run -d \
 #### On **Windows** (PowerShell):
 ```powershell
 docker run -d `
-    --name postgres-todo `
+    --name postgres-expense-tracker `
     -e POSTGRES_DB=$env:DATABASE_NAME `
     -e POSTGRES_USER=$env:DATABASE_USER `
     -e POSTGRES_PASSWORD=$env:DATABASE_PASSWORD `

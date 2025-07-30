@@ -1,4 +1,4 @@
-"""Main application entry point for the FastAPI Todo application.
+"""Main application entry point for the FastAPI Expense Tracker application.
 
 This file initializes the FastAPI app, sets up the lifespan context manager,
 and configures the application with custom settings.

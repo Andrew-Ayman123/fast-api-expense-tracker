@@ -1,4 +1,4 @@
-"""FastAPI Todo Application.
+"""FastAPI Expense Tracker Application.
 
-This module serves as the entry point for the FastAPI Todo application.
+This module serves as the entry point for the FastAPI Expense Tracker application.
 """

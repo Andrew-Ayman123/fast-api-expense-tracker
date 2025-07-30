@@ -1,7 +1,7 @@
 [project]
-name = "fast-api-test-todo"
+name = "fast-api-expense-tracker"
 version = "0.1.0"
-description = "FastAPI Todo App with Repository Pattern"
+description = "FastAPI Expense Tracker App with Repository Pattern"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
