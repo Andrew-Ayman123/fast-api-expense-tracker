@@ -69,11 +69,13 @@ fi
 ```powershell
 if (Test-Path ".env") {
     Get-Content ".env" |
-        Where-Object { $_ -notmatch '^#' -and $_ -ne '' } |
+        Where-Object { $_ -notmatch '^\s*#' -and $_ -match '=' } |
         ForEach-Object {
             $line = ($_ -split '#')[0].Trim()  # Remove inline comments
             if ($line -match "^\s*(\w+)\s*=\s*(.+)\s*$") {
-                $env:$($matches[1]) = $matches[2]
+                $key = $matches[1]
+                $value = $matches[2]
+                Set-Item -Path "Env:$key" -Value $value
             }
         }
 }
