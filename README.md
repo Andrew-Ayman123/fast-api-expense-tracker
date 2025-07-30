@@ -11,14 +11,14 @@
 ```bash
 curl -Ls https://astral.sh/uv/install.sh | sh
 uv --version
-uv venv
+uv venv --python 3.12
 ```
 
 #### On **Windows** (PowerShell):
 ```powershell
 irm https://astral.sh/uv/install.ps1 | iex
 uv --version
-uv venv
+uv venv --python 3.12
 ```
 
 ---
