@@ -5,6 +5,7 @@ from collections.abc import AsyncGenerator
 
 import pytest
 import pytest_asyncio
+from fastapi import status
 from httpx import ASGITransport, AsyncClient, Response
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -55,22 +56,23 @@ async def auth_token_header(client: AsyncClient, sample_user_data: UserModel) ->
 
     It registers a sample user(from the sample_user_data fixture) and returns the token in the header.
     """
-    sample_user_create_data = UserCreateRequest(
-        email=sample_user_data.email,
-        username=sample_user_data.username,
-        password=sample_user_data.password,
-    )
     response: Response = await client.post(
-        "/user/register",
-        json=sample_user_create_data.model_dump(),
-        follow_redirects=False,
+        "/users/register",
+        json=UserCreateRequest(
+            email=sample_user_data.email,
+            username=sample_user_data.username,
+            password=sample_user_data.password,
+        ).model_dump(),
     )
-    assert response.status_code == 200, "User registration failed"
-    assert "token" in response.json(), "Token not found in registration response"
-    assert response.json()["email"] == sample_user_create_data.email, "Email mismatch in registration response"
+    assert response.status_code == status.HTTP_200_OK
+    json_data = response.json()
+    assert "data" in json_data
+    assert "token" in json_data["data"]
+    assert "refresh_token" in json_data["data"]
+    assert json_data["data"]["user"]["email"] == sample_user_data.email
 
-    token = response.json().get("token")
-    return {"Authorization": f"Bearer {token}"} if token else {}
+    token = json_data["data"]["token"]
+    return {"Authorization": f"Bearer {token}"}
 
 
 @pytest_asyncio.fixture(scope="function")
