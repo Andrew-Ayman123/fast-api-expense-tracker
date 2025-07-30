@@ -56,7 +56,14 @@ pre-commit --version
 
 ---
 
-### 5. Ingest environment variables from `.env`
+### 5. Install Pre-Commit hooks
+```bash
+pre-commit install
+```
+
+---
+
+### 6. Ingest environment variables from `.env`
 
 #### On **Linux**:
 ```bash
@@ -83,7 +90,7 @@ if (Test-Path ".env") {
 
 ---
 
-### 6. Set up Docker container for PostgreSQL
+### 7. Set up Docker container for PostgreSQL
 
 #### On **Linux**:
 ```bash
@@ -108,7 +115,7 @@ docker run -d `
 ```
 ---
 
-### 7. Run database migrations
+### 8. Run database migrations
 
 #### On **Linux**:
 ```bash
@@ -121,13 +128,13 @@ alembic -x url=$env:DATABASE_URL_ALEMBIC upgrade head
 ```
 ---
 
-### 8. Run the server
+### 9. Run the server
 
 ```bash
 uv run run.py
 ```
 
-### 9. Install VS-Code extensions (Optional)
+### 10. Install VS-Code extensions (Optional)
 
 #### On **Linux**:
 ```bash
@@ -139,3 +146,7 @@ cat vscode-extensions.txt | xargs -n 1 code --install-extension
 Get-Content vscode-extensions.txt | ForEach-Object { code --install-extension $_ }
 ```
 ---
+
+## Contributing
+
+- Don't use `uv pip install`, use `uv add` to add to the `pyproject.toml`
