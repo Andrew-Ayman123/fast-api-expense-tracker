@@ -110,10 +110,15 @@ docker run -d `
 
 ### 7. Run database migrations
 
+#### On **Linux**:
 ```bash
 alembic -x url=$DATABASE_URL_ALEMBIC upgrade head
 ```
 
+#### On **Windows** (PowerShell):
+```powershell
+alembic -x url=$env:DATABASE_URL_ALEMBIC upgrade head
+```
 ---
 
 ### 8. Run the server
