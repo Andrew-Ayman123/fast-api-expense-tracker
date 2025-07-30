@@ -18,7 +18,7 @@ uv venv --python 3.12
 ```powershell
 irm https://astral.sh/uv/install.ps1 | iex
 uv --version
-uv venv
+uv venv --python 3.12
 ```
 
 ---
