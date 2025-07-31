@@ -13,8 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from app.config.environment import Settings
 from app.exceptions.db_connection_async_support_missing import DBConnectionAsyncSupportMissingError
+from app.repositories.interfaces.user_repository_interface import UserRepositoryInterface
 from app.repositories.user_pg_repository_impl import UserPGRepository
-from app.repositories.user_repository_interface import UserRepositoryInterface
 from app.services.jwt_service import JWTService
 from app.services.user_service import UserService
 

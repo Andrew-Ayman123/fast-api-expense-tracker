@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from app.models.user_model import UserModel
-from app.repositories.user_repository_interface import UserRepositoryInterface
+from app.repositories.interfaces.user_repository_interface import UserRepositoryInterface
 from app.utils.logger_util import get_logger
 
 
