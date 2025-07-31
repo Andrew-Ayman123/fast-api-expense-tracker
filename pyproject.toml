@@ -28,6 +28,9 @@ dependencies = [
     "types-python-jose>=3.5.0.20250531",
     "pre-commit>=4.2.0",
     "httpx>=0.28.1",
+    "celery>=5.5.3",
+    "redis>=6.2.0",
+    "flower>=2.0.1",
 ]
 
 [tool.pytest.ini_options]
@@ -61,3 +64,6 @@ skips = ['*_test.py', '*/test_*.py']
 [tool.ruff.format]
 line-ending = "lf"
 skip-magic-trailing-comma = false
+
+[tool.mypy]
+ignore_missing_imports = true

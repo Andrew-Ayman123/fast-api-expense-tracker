@@ -19,6 +19,12 @@ class Settings(BaseSettings):
     database_user: str = get_env("DATABASE_USER")
     database_password: str = get_env("DATABASE_PASSWORD")
 
+    #Redis Configuration
+    redis_host: str = get_env("REDIS_HOST")
+    redis_port: int = get_env_int("REDIS_PORT")
+    celery_broker_url: str = get_env("CELERY_BROKER_URL")
+    celery_result_backend: str = get_env("CELERY_RESULT_BACKEND")
+
     database_logging: bool = get_env_bool("DATABASE_LOGGING")
 
     app_name: str = get_env("APP_NAME")

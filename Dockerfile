@@ -5,6 +5,7 @@ RUN apt-get update && apt-get install -y \
     gcc \
     libpq-dev \
     curl \
+    redis-tools \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv for faster package management
@@ -18,7 +19,7 @@ COPY pyproject.toml ./
 RUN uv venv .venv
 RUN . .venv/bin/activate
 
-# Copy application code first, because "app" config inside the pyproject.toml file
+# Copy application code
 COPY . .
 
 RUN uv pip install .
