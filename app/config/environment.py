@@ -35,3 +35,8 @@ class Settings(BaseSettings):
     jwt_expiration_minutes: int = get_env_int("JWT_EXPIRATION_MINUTES")
 
     testing: bool = get_env_bool("TESTING")
+
+    # CORS Configuration
+    allowed_origins: list[str] = ["*"]
+    allowed_methods: list[str] = ["*"]
+    allowed_headers: list[str] = ["*"]
