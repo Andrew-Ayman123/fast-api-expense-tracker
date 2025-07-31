@@ -7,90 +7,122 @@ from fastapi import status
 from httpx import AsyncClient, Response
 
 from app.models.user_model import UserModel
-from app.schemas.user_schema import UserCreateRequest, UserLoginRequest
+from app.schemas.user_schema import (
+    RefreshTokenRequest,
+    UserCreateRequest,
+    UserLoginRequest,
+)
 
 logger = logging.getLogger(__name__)
 
+
 @pytest.mark.usefixtures("reset_user_data_function")
 class TestUserAPI:
-    """System tests for user registration, login, and profile endpoints."""
+    """System tests for user registration, login, profile, and token refresh."""
 
-    @pytest.mark.asyncio
-    async def test_register_user_conflict(
-        self,
-        client: AsyncClient,
-        sample_user_data: UserModel,
-    ) -> None:
-        """Test registering a user that already exists returns conflict."""
-        sample_user_create_data = UserCreateRequest(
-            email=sample_user_data.email,
-            username=sample_user_data.username,
-            password=sample_user_data.password,
-        )
-        response: Response = await client.post(
-            "/user/register",
-            json=sample_user_create_data.model_dump(),
-            follow_redirects=False,
-        )
-        assert response.status_code == status.HTTP_200_OK, "User registration failed on first attempt"
-        assert "token" in response.json(), "Token not found in registration response"
-        assert response.json()["email"] == sample_user_create_data.email, "Email mismatch in registration response"
-
-        response = await client.post(
-            "/user/register",
-            json=sample_user_create_data.model_dump(),
-            follow_redirects=False,
+    async def _register_user(self, client: AsyncClient, user: UserModel) -> Response:
+        return await client.post(
+            "/users/register",
+            json=UserCreateRequest(
+                email=user.email,
+                username=user.username,
+                password=user.password,
+            ).model_dump(),
         )
 
-        assert response.status_code == status.HTTP_409_CONFLICT, (
-            "Expected conflict status code for duplicate user registration"
+    async def _login_user(self, client: AsyncClient, user: UserModel) -> Response:
+        return await client.post(
+            "/users/login",
+            json=UserLoginRequest(
+                email=user.email,
+                password=user.password,
+            ).model_dump(),
         )
 
     @pytest.mark.asyncio
-    async def test_login_user(
-        self,
-        client: AsyncClient,
-        auth_token_header: dict[str, str],  # noqa: ARG002
-        sample_user_data: UserModel,
-    ) -> None:
-        """Test successful login of a registered user."""
-        sample_user_login_data = UserLoginRequest(
-            email=sample_user_data.email,
-            password=sample_user_data.password,
-        )
-        response: Response = await client.post("/user/login", json=sample_user_login_data.model_dump())
+    async def test_register_user_success(self, client: AsyncClient, sample_user_data: UserModel) -> None:
+        """Test successful user registration."""
+        response = await self._register_user(client, sample_user_data)
 
         assert response.status_code == status.HTTP_200_OK
-        assert "token" in response.json()
+        json = response.json()
+        assert "token" in json["data"]
+        assert "refresh_token" in json["data"]
+        assert json["data"]["user"]["email"] == sample_user_data.email
+
+    @pytest.mark.asyncio
+    async def test_register_user_conflict(self, client: AsyncClient, sample_user_data: UserModel) -> None:
+        """Test registering an already existing user returns conflict."""
+        await self._register_user(client, sample_user_data)
+        response = await self._register_user(client, sample_user_data)
+
+        assert response.status_code == status.HTTP_409_CONFLICT
+        assert response.json()["detail"]["message"] == "User already exists"
+
+    @pytest.mark.asyncio
+    async def test_login_user_success(self, client: AsyncClient, sample_user_data: UserModel) -> None:
+        """Test login with correct credentials."""
+        await self._register_user(client, sample_user_data)
+        response = await self._login_user(client, sample_user_data)
+
+        assert response.status_code == status.HTTP_200_OK
+        json = response.json()
+        assert "token" in json["data"]
+        assert "refresh_token" in json["data"]
+        assert json["data"]["user"]["email"] == sample_user_data.email
 
     @pytest.mark.asyncio
     async def test_login_wrong_credentials(self, client: AsyncClient) -> None:
-        """Test login failure with incorrect credentials."""
-        sample_user_login_data = UserLoginRequest(
-            email="wrong_email@example.com",
-            password="wrong_password",  # noqa: S106
+        """Test login failure with wrong credentials."""
+        response = await client.post(
+            "/users/login",
+            json=UserLoginRequest(email="wrong@example.com", password="badpassword").model_dump(),  # noqa: S106
         )
-        response: Response = await client.post("/user/login", json=sample_user_login_data.model_dump())
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
-        assert response.json()["detail"] == "Wrong email or password"
+        assert response.json()["detail"]["message"] == "Invalid credentials"
 
     @pytest.mark.asyncio
     async def test_get_profile_success(
-        self,
-        client: AsyncClient,
-        auth_token_header: dict[str, str],
-        sample_user_data: UserModel,
+        self, client: AsyncClient, auth_token_header: dict, sample_user_data: UserModel,
     ) -> None:
-        """Test successful retrieval of user profile with valid JWT."""
-        response: Response = await client.get("/user/profile", headers=auth_token_header)
-
+        """Test profile retrieval with valid token."""
+        response = await client.get("/users/me", headers=auth_token_header)
         assert response.status_code == status.HTTP_200_OK
-        assert response.json()["email"] == sample_user_data.email
+        json = response.json()
+        assert json["data"]["user"]["email"] == sample_user_data.email
 
     @pytest.mark.asyncio
     async def test_get_profile_unauthorized(self, client: AsyncClient) -> None:
-        """Test unauthorized access to profile without token."""
-        response: Response = await client.get("/user/profile")
-
+        """Test profile retrieval without JWT token."""
+        response = await client.get("/users/me")
         assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    @pytest.mark.asyncio
+    async def test_refresh_token_success(self, client: AsyncClient, sample_user_data: UserModel) -> None:
+        """Test token refresh with valid refresh token."""
+        await self._register_user(client, sample_user_data)
+        login_response = await self._login_user(client, sample_user_data)
+
+        refresh_token = login_response.json()["data"]["refresh_token"]
+
+        response = await client.post(
+            "/users/refresh",
+            json=RefreshTokenRequest(refresh_token=refresh_token).model_dump(),
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()["data"]
+        assert "token" in data
+        assert "refresh_token" in data
+
+    @pytest.mark.asyncio
+    async def test_refresh_token_invalid(self, client: AsyncClient) -> None:
+        """Test refresh token failure with invalid token."""
+        response = await client.post(
+            "/users/refresh",
+            json=RefreshTokenRequest(refresh_token="invalid.token.value").model_dump(),  # noqa: S106
+        )
+
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert response.json()["detail"]["message"] == "Invalid or expired refresh token"

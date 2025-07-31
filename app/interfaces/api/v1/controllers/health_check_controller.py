@@ -2,13 +2,13 @@
 
 from fastapi import APIRouter
 
-from app.schemas.health_check_schema import HealthCheckResponse
+from app.schemas.health_check_schema import HealthCheckData, HealthCheckResponse
 
 # versioning is handled in the main file
 router = APIRouter(prefix="/health", tags=["health"])
 
 
-@router.get("/", summary="Health check endpoint")
+@router.get("", summary="Health check endpoint")
 async def health_check() -> HealthCheckResponse:
     """Perform a health check to verify API status.
 
@@ -16,4 +16,4 @@ async def health_check() -> HealthCheckResponse:
         HealthCheckResponse: HealthCheckResponse with status "ok" if the API is healthy.
 
     """
-    return HealthCheckResponse(status="ok")
+    return HealthCheckResponse(data=HealthCheckData(status="ok"))

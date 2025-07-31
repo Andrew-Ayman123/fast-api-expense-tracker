@@ -1,6 +1,6 @@
 """User Model Module.
 
-Defines the UserModel for authentication and ownership of todos.
+Defines the UserModel for authentication and ownership of Expense Tracker resources.
 """
 
 import uuid
