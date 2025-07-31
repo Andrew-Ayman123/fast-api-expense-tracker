@@ -13,7 +13,7 @@ class GroupRepositoryInterface(ABC):
     """Abstract base class for group repository operations."""
 
     @abstractmethod
-    async def create_group(self, name: str, created_by_id: uuid.UUID) -> GroupModel | None:
+    async def create_group(self, name: str, created_by_id: uuid.UUID , description: str) -> GroupModel | None:
         """Create a new group and return the group model."""
 
     @abstractmethod
@@ -21,8 +21,8 @@ class GroupRepositoryInterface(ABC):
         """Get group data by ID."""
 
     @abstractmethod
-    async def get_all_groups(self) -> list[GroupModel]:
-        """Retrieve a list of all groups."""
+    async def get_all_groups(self, user_id: uuid.UUID) -> list[GroupModel]:
+        """Retrieve a list of all groups for a user."""
 
     @abstractmethod
     async def delete_group(self, group_id: uuid.UUID) -> None:
