@@ -1,4 +1,4 @@
-"""Todo Models Module.
+"""Expense Tracker Models Module.
 
-This module defines the data models for todos, including todo lists and todo list items.
+This module defines the data models for expenses, including expense categories and expense items.
 """

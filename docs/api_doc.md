@@ -26,7 +26,7 @@ Authorization: Bearer <jwt_token>
 
 ```json
 {
-  "error": {
+  "detail": {
     "message": "Human readable error message",
     "details": {} // Additional error details
   }

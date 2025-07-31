@@ -59,3 +59,23 @@ class JWTService:
         """Decode a JWT token and return the user ID."""
         payload = self.decode_token(token)
         return uuid.UUID(payload["user_id"])
+
+    def generate_refresh_token(self, user_id: uuid.UUID) -> str:
+        """Generate a refresh token with longer expiration."""
+        # Typically 7-30 days
+        expiration = datetime.now(tz=UTC) + timedelta(days=7)
+        payload = {
+            "user_id": str(user_id),
+            "type": "refresh",
+            "exp": int(expiration.timestamp()),
+        }
+        return jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
+
+    def decode_refresh_token_user_id(self, refresh_token: str) -> uuid.UUID:
+        """Decode a refresh token and return the user ID."""
+        payload = self.decode_token(refresh_token)
+        # Optional: verify token type
+        if payload.get("type") != "refresh":
+            msg = "Invalid refresh token"
+            raise ValueError(msg)
+        return uuid.UUID(payload["user_id"])

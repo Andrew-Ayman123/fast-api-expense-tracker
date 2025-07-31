@@ -3,8 +3,8 @@
 from pydantic import BaseModel
 
 
-class HealthCheckResponse(BaseModel):
-    """Schema for health check response."""
+class HealthCheckData(BaseModel):
+    """Schema for health check data."""
 
     status: str
 
@@ -12,3 +12,9 @@ class HealthCheckResponse(BaseModel):
         """Configuration for Pydantic model."""
 
         from_attributes = True
+
+
+class HealthCheckResponse(BaseModel):
+    """Schema for health check response."""
+
+    data: HealthCheckData
