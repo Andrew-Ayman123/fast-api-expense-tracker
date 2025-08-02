@@ -31,4 +31,4 @@ app.add_middleware(
 
 app.include_router(health_routes, prefix="/api/v1")
 app.include_router(user_router, prefix="/api/v1")
-app.include_router(sync_router)
+app.include_router(sync_router, prefix="/api/v1")

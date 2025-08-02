@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:15
+        image: postgres:15g
         env:
           POSTGRES_DB: expense_db
           POSTGRES_USER: user

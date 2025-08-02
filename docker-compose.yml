@@ -44,8 +44,6 @@ services:
     environment:
       - DATABASE_URL=postgresql+asyncpg://${DATABASE_USER}:${DATABASE_PASSWORD}@postgres:5432/${DATABASE_NAME}
       - DATABASE_URL_ALEMBIC=postgresql://${DATABASE_USER}:${DATABASE_PASSWORD}@postgres:5432/${DATABASE_NAME}
-      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
-      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
     env_file:
       - .env
     depends_on:
@@ -90,7 +88,7 @@ services:
     command: >
       sh -c "
         . .venv/bin/activate &&
-        uv run celery -A app.celery_worker.celery worker --loglevel=info
+        uv run celery -A ${CELERY_MODULE} worker --loglevel=info
       "
 
   flower:
@@ -116,7 +114,7 @@ services:
     command: >
       sh -c "
         . .venv/bin/activate &&
-        uv run celery -A app.celery_worker.celery flower --port=5555
+        uv run celery -A ${CELERY_MODULE} flower --port=5555
       "
 
 volumes:

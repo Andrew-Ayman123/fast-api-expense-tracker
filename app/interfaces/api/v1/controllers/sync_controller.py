@@ -5,7 +5,7 @@ import logging
 from celery.result import AsyncResult
 from fastapi import APIRouter
 
-from app.celery_worker import celery, say_hello
+from app.services.celery_worker_service import celery, say_hello
 
 logger = logging.getLogger(__name__)
 
