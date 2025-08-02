@@ -1,10 +1,6 @@
 name: CI
 
-on:
-  pull_request:
-    branches:
-      - master
-  workflow_dispatch:
+on: [push, pull_request]
 
 jobs:
   test:
@@ -20,7 +16,7 @@ jobs:
         ports:
           - 6000:5432
         options: >-
-          --health-cmd "pg_isready -U user -d expense_db"
+          --health-cmd "pg_isready"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -52,13 +48,12 @@ jobs:
           python-version: "3.11"
 
       - name: Load env file manually
-        run: |
-          cat pytest.env >> $GITHUB_ENV
+        run: cat pytest.env >> $GITHUB_ENV
 
       - name: Install uv
         run: pip install uv
 
-      - name: Install dependencies
+      - name: Install project dependencies with uv
         run: |
           uv venv .venv
           source .venv/bin/activate
