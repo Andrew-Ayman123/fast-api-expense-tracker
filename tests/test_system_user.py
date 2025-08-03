@@ -6,7 +6,7 @@ import pytest
 from fastapi import status
 from httpx import AsyncClient, Response
 
-from app.models.user_model import UserModel
+from app.models import UserModel
 from app.schemas.user_schema import (
     RefreshTokenRequest,
     UserCreateRequest,

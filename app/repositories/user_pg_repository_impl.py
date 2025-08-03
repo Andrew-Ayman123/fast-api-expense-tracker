@@ -6,10 +6,11 @@ using SQLAlchemy ORM for database operations with async session.
 
 import uuid
 
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from app.models.user_model import UserModel
+from app.models import UserModel
 from app.repositories.interfaces.user_repository_interface import UserRepositoryInterface
 from app.utils.logger_util import get_logger
 
@@ -98,3 +99,31 @@ class UserPGRepository(UserRepositoryInterface):
         query = select(UserModel).where(UserModel.id.in_(user_ids))
         result = await self.session.execute(query)
         return list(result.scalars().all())
+    async def update_user(self, user_id: uuid.UUID, email: str | None = None, username: str | None = None, password_hash: str | None = None) -> UserModel | None:  # noqa: E501
+        """Update user data.
+
+        Args:
+            user_id (UUID): The user's UUID.
+            email (str, optional): The new email for the user.
+            username (str, optional): The new username for the user.
+            password_hash (str, optional): The new hashed password for the user.
+
+        Returns:
+            UserModel | None: The updated user data if successful, else None.
+
+        """
+        query = update(UserModel).where(UserModel.id == user_id).values(
+            email=email,
+            username=username,
+            password=password_hash,
+        ).returning(UserModel)
+
+        result = await self.session.execute(query)
+        updated_user = result.scalar_one_or_none()
+
+        if updated_user:
+            await self.session.commit()
+            return updated_user
+
+        get_logger().warning("No user found with ID: %s", user_id)
+        return None
