@@ -1,4 +1,3 @@
-```mermaid
 erDiagram
 
     USERS {
@@ -38,11 +37,18 @@ erDiagram
         TIMESTAMP updated_at
     }
 
+    EXPENSE_MEMBERS {
+        UUID expense_id PK, FK
+        UUID user_id PK, FK
+    }
+
     %% Relationships
     USERS ||--o{ GROUPS : "creates"
-    USERS ||--o{ GROUP_MEMBERS : "joins"    
+    USERS ||--o{ GROUP_MEMBERS : "joins"
     USERS ||--o{ EXPENSES : "pays"
+    USERS ||--o{ EXPENSE_MEMBERS : "assigned to"
 
     GROUPS ||--o{ GROUP_MEMBERS : "has members"
     GROUPS ||--o{ EXPENSES : "has expenses"
-```
+
+    EXPENSES ||--o{ EXPENSE_MEMBERS : "is assigned"
