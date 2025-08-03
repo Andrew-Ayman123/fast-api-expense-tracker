@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_database_engine, get_session_maker
 from app.main import app
-from app.models.user_model import UserModel
+from app.models import UserModel
 from app.schemas.user_schema import UserCreateRequest
 
 

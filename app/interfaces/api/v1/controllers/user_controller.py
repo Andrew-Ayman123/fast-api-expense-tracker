@@ -11,7 +11,7 @@ from app.exceptions.user_exception import (
     WrongEmailOrPasswordError,
 )
 from app.middleware.jwt_middleware import JWTBearer
-from app.models.user_model import UserModel
+from app.models import UserModel
 from app.schemas.user_schema import (
     RefreshTokenRequest,
     TokenRefreshData,

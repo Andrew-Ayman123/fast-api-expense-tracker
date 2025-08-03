@@ -7,7 +7,7 @@ from sqlalchemy import DateTime, ForeignKey, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.shared_base_model import Base  # Assuming shared DeclarativeBase is defined here
+from app.models.shared_base_model import Base
 
 
 class GroupModel(Base):
@@ -51,15 +51,7 @@ class GroupModel(Base):
         onupdate=func.now(),
     )
 
-    members = relationship(
-        "GroupMemberModel",
-        back_populates="group",
-    )
-    expenses = relationship(
-        "ExpenseModel",
-        back_populates="group",
-    )
-    creator = relationship(
-        "UserModel",
-        back_populates="created_groups",
-    )
+    members = relationship("GroupMemberModel", back_populates="group")
+    expenses = relationship("ExpenseModel", back_populates="group")
+    creator = relationship("UserModel", back_populates="created_groups")
+

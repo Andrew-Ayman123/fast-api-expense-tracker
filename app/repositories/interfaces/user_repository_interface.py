@@ -6,7 +6,7 @@ This module defines the abstract interface for User repository operations.
 import uuid
 from abc import ABC, abstractmethod
 
-from app.models.user_model import UserModel
+from app.models import UserModel
 
 
 class UserRepositoryInterface(ABC):

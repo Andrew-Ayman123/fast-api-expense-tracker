@@ -21,7 +21,7 @@ class GroupRepositoryInterface(ABC):
         """Get group data by ID."""
 
     @abstractmethod
-    async def get_all_groups(self, user_id: uuid.UUID) -> list[GroupModel]:
+    async def get_all_groups(self, user_id: uuid.UUID , page: int , limit:int) -> list[GroupModel]:
         """Retrieve a list of all groups for a user."""
 
     @abstractmethod

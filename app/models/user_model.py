@@ -39,15 +39,6 @@ class UserModel(Base):
         onupdate=func.now(),
     )
 
-    group_membership = relationship(
-        "GroupMemberModel",
-        back_populates="user",
-    )
-    expenses_paid = relationship(
-        "ExpenseModel",
-        back_populates="payer",
-    )
-    created_groups = relationship(
-        "GroupModel",
-        back_populates="creator",
-    )
+    group_membership = relationship("GroupMemberModel", back_populates="user")
+    expenses_paid = relationship("ExpenseModel", back_populates="payer")
+    created_groups = relationship("GroupModel", back_populates="creator")

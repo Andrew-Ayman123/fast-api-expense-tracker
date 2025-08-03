@@ -4,7 +4,7 @@ Defines the GroupMemberModel for representing group membership in the applicatio
 """
 import uuid
 
-from sqlalchemy import Enum, ForeignKey
+from sqlalchemy import Enum, ForeignKey, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -16,6 +16,9 @@ class GroupMemberModel(Base):
     """SQLAlchemy Group Member model - represents the group_members table."""
 
     __tablename__ = "group_members"
+    __table_args__ = (
+        UniqueConstraint("group_id", "user_id", name="uq_group_user_membership"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -42,11 +45,6 @@ class GroupMemberModel(Base):
         nullable=False,
     )
 
-    user = relationship(
-        "UserModel",
-        back_populates="group_membership",
-    )
-    group = relationship(
-        "GroupModel",
-        back_populates="members",
-    )
+    user = relationship("UserModel", back_populates="group_membership")
+    group = relationship("GroupModel", back_populates="members")
+

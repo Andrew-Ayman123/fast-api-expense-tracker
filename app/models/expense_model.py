@@ -5,7 +5,7 @@ Defines the ExpenseModel for managing expense-related data.
 
 import uuid
 
-from sqlalchemy import Date, DateTime, Enum, Float, ForeignKey, String
+from sqlalchemy import Date, DateTime, Enum, Float, ForeignKey, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
@@ -18,6 +18,10 @@ class ExpenseModel(Base):
     """SQLAlchemy Expense model - represents the expenses table."""
 
     __tablename__ = "expenses"
+
+    __table_args__ = (
+        UniqueConstraint("group_id", "payer_id", name="uq_group_expense_payer"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -69,11 +73,7 @@ class ExpenseModel(Base):
         server_default=func.now(),
         onupdate=func.now(),
     )
-    payer = relationship(
-        "UserModel",
-        back_populates="paid_expenses",
-    )
-    group = relationship(
-        "GroupModel",
-        back_populates="expenses",
-    )
+
+    payer = relationship("UserModel", back_populates="expenses_paid")
+    group = relationship("GroupModel", back_populates="expenses")
+

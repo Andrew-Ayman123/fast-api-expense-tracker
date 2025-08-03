@@ -14,7 +14,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import text
 
-from app.models.user_model import UserModel
+from app.models import UserModel
 from app.repositories.user_pg_repository_impl import UserPGRepository
 
 

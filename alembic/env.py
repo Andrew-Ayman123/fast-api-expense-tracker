@@ -10,13 +10,11 @@ from logging.config import fileConfig  # noqa: I001
 from sqlalchemy import engine_from_config, pool
 
 from alembic import context
-from app.models.group_model import GroupModel  # noqa: F401
+
 from app.models.shared_base_model import Base  # shared DeclarativeBase
 
 # list of models to import for Alembic migrations (unused but needs to see them)
-from app.models.user_model import UserModel  # noqa: F401
-from app.models.group_members_model import GroupMemberModel  # noqa: F401
-from app.models.expense_model import ExpenseModel  # noqa: F401
+import app.models  # noqa: F401
 
 
 
