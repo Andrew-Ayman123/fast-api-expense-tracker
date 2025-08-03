@@ -1,16 +1,17 @@
 """FastAPI User API Controller."""
 
+import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends
 
-from app.dependencies import get_jwt_service, get_user_service
+from app.dependencies.services_dependencies import get_jwt_service, get_user_service
 from app.exceptions.user_exception import (
     UserAlreadyExistsError,
     UserIDNotFoundError,
     WrongEmailOrPasswordError,
 )
-from app.middleware.jwt_middleware import JWTBearer
+from app.middleware.jwt_auth_middleware import get_current_user_id
 from app.models.user_model import UserModel
 from app.schemas.user_schema import (
     RefreshTokenRequest,
@@ -27,7 +28,7 @@ from app.schemas.user_schema import (
 )
 from app.services.jwt_service import JWTService
 from app.services.user_service import UserService
-from app.utils.create_error_data_util import create_error_data
+from app.utils.create_exception_util import create_http_exception
 from app.utils.logger_util import get_logger
 
 # versioning is handled in the main file
@@ -70,12 +71,18 @@ async def register_user(
 
         return UserRegisterResponse(data=user_with_tokens)
     except UserAlreadyExistsError as e:
-        error_data = create_error_data(message="User already exists", details={"email": user_data.email})
-        raise HTTPException(status_code=409, detail=error_data.model_dump()) from e
+        raise create_http_exception(
+            message="User already exists",
+            status_code=409,
+            details={"error": str(e)},
+        ) from e
     except Exception as e:
         get_logger().error("Error creating user: %s", str(e))
-        error_data = create_error_data(message="Failed to create user", details={"error": str(e)})
-        raise HTTPException(status_code=400, detail=error_data.model_dump()) from e
+        raise create_http_exception(
+            message="Failed to create user",
+            status_code=400,
+            details={"error": str(e)},
+        ) from e
 
 
 @router.post("/login")
@@ -109,23 +116,29 @@ async def login_user(
 
         return UserLoginResponse(data=user_with_tokens)
     except WrongEmailOrPasswordError as e:
-        error_data = create_error_data(message="Invalid credentials", details={"email": login_data.email})
-        raise HTTPException(status_code=401, detail=error_data.model_dump()) from e
+        raise create_http_exception(
+            message="Login failed",
+            status_code=401,
+            details= {"error": str(e)},
+        ) from e
     except Exception as e:
-        error_data = create_error_data(message="Login failed", details={"error": str(e)})
-        raise HTTPException(status_code=400, detail=error_data.model_dump()) from e
+        raise create_http_exception(
+            message="Login failed",
+            status_code=400,
+            details={"error": str(e)},
+        ) from e
 
 
-@router.get("/me", dependencies=[Depends(JWTBearer())])
+@router.get("/me")
 async def get_user_by_id(
     user_service: Annotated[UserService, Depends(get_user_service)],
-    request: Request,
+    current_user_id: Annotated[uuid.UUID, Depends(get_current_user_id)],
 ) -> UserProfileResponse:
     """Get user profile by ID from JWT token.
 
     Args:
         user_service (UserService): The user service instance.
-        request (Request): The FastAPI request object containing the JWT token.
+        current_user_id (uuid.UUID): The user ID extracted from the JWT token.
 
     Returns:
         UserProfileResponse: The user profile data wrapped in data field.
@@ -137,22 +150,24 @@ async def get_user_by_id(
 
     """
     try:
-        user_id = request.state.user_id
-        user = await user_service.get_user_by_id(user_id)
+        user = await user_service.get_user_by_id(current_user_id)
 
         user_data_obj = _convert_user_to_data(user)
         user_profile_data = UserProfileData(user=user_data_obj)
 
         return UserProfileResponse(data=user_profile_data)
     except UserIDNotFoundError as e:
-        error_data = create_error_data(
+        raise create_http_exception(
             message="User not found",
-            details={"user_id": str(request.state.user_id)},
-        )
-        raise HTTPException(status_code=404, detail=error_data.model_dump()) from e
+            status_code=404,
+            details={"user_id": str(current_user_id)},
+        ) from e
     except Exception as e:
-        error_data = create_error_data(message="Failed to retrieve user profile", details={"error": str(e)})
-        raise HTTPException(status_code=400, detail=error_data.model_dump()) from e
+        raise create_http_exception(
+            message="Failed to retrieve user profile",
+            status_code=400,
+            details={"error": str(e)},
+        ) from e
 
 
 @router.post("/refresh")
@@ -193,15 +208,20 @@ async def refresh_token(
         return TokenRefreshResponse(data=token_data)
     except ValueError as e:
         # JWT decode errors (expired, invalid)
-        error_data = create_error_data(
-            message="Invalid or expired refresh token",
-            details={"token_error": str(e)},
-        )
-        raise HTTPException(status_code=401, detail=error_data.model_dump()) from e
+        raise create_http_exception(
+            message="Unauthorized",
+            status_code=401,
+            details={"error": str(e)},
+        ) from e
     except UserIDNotFoundError as e:
-        error_data = create_error_data(message="User not found", details={"error": str(e)})
-        raise HTTPException(status_code=404, detail=error_data.model_dump()) from e
+        raise create_http_exception(
+            message="User not found",
+            status_code=404,
+            details={"error": str(e)},
+        ) from e
     except Exception as e:
-        get_logger().error("Error refreshing token: %s", str(e))
-        error_data = create_error_data(message="Token refresh failed", details={"error": str(e)})
-        raise HTTPException(status_code=400, detail=error_data.model_dump()) from e
+        raise create_http_exception(
+            message="Token refresh failed",
+            status_code=400,
+            details={"error": str(e)},
+        ) from e

@@ -10,8 +10,9 @@ from httpx import ASGITransport, AsyncClient, Response
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dependencies import get_database_engine, get_session_maker
+from app.dependencies.database_dependencies import get_database_engine, get_session_maker
 from app.main import app
+from app.models.group_model import GroupModel
 from app.models.user_model import UserModel
 from app.schemas.user_schema import UserCreateRequest
 
@@ -50,6 +51,17 @@ def sample_user_data() -> UserModel:
     )
 
 
+@pytest.fixture
+def sample_group_data() -> GroupModel:
+    """Sample group data for testing."""
+    return GroupModel(
+        id=uuid.uuid4(),
+        name="Test Group",
+        description="A test group for expense tracking",
+        created_by=uuid.uuid4(),  # Will be replaced with actual user ID in tests
+    )
+
+
 @pytest_asyncio.fixture()
 async def auth_token_header(client: AsyncClient, sample_user_data: UserModel) -> dict[str, str]:
     """Return the authorization header with the current token.
@@ -79,6 +91,19 @@ async def auth_token_header(client: AsyncClient, sample_user_data: UserModel) ->
 async def reset_user_data_function() -> AsyncGenerator[None, None]:
     """Reset user data in the database for function scope tests."""
     async with get_session_maker(get_database_engine())() as session:
+        await session.execute(text("DELETE FROM users"))
+        await session.commit()
+        yield
+
+
+@pytest_asyncio.fixture(scope="function")
+async def reset_group_data_function() -> AsyncGenerator[None, None]:
+    """Reset group and related data in the database for function scope tests."""
+    async with get_session_maker(get_database_engine())() as session:
+        # Delete in correct order due to foreign key constraints
+        await session.execute(text("DELETE FROM expenses"))
+        await session.execute(text("DELETE FROM group_members"))
+        await session.execute(text("DELETE FROM groups"))
         await session.execute(text("DELETE FROM users"))
         await session.commit()
         yield

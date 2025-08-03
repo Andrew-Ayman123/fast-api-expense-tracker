@@ -84,3 +84,17 @@ class UserPGRepository(UserRepositoryInterface):
         query = select(UserModel).where(UserModel.email == email)
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
+
+    async def get_many_users_by_ids(self, user_ids: list[uuid.UUID]) -> list[UserModel]:
+        """Get multiple users by their IDs.
+
+        Args:
+            user_ids (list[UUID]): List of user UUIDs.
+
+        Returns:
+            list[UserModel]: List of user models matching the provided IDs.
+
+        """
+        query = select(UserModel).where(UserModel.id.in_(user_ids))
+        result = await self.session.execute(query)
+        return list(result.scalars().all())

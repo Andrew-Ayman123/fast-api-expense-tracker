@@ -58,6 +58,9 @@ class JWTService:
     def decode_token_user_id(self, token: str) -> uuid.UUID:
         """Decode a JWT token and return the user ID."""
         payload = self.decode_token(token)
+        if payload.get("user_id") is None:
+            msg = "user_id not found in token"
+            raise ValueError(msg)
         return uuid.UUID(payload["user_id"])
 
     def generate_refresh_token(self, user_id: uuid.UUID) -> str:
