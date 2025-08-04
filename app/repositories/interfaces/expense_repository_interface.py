@@ -51,3 +51,11 @@ class ExpenseRepositoryInterface(ABC):
     @abstractmethod
     async def count_expenses_in_group(self, group_id: uuid.UUID) -> int:
         """Count the number of expenses in a group."""
+
+    @abstractmethod
+    async def get_expenses_for_user_in_group(
+        self,
+        user_id: uuid.UUID,
+        group_id: uuid.UUID,
+    ) -> list[ExpenseModel]:
+        """Get all expenses in a group where the user is either a payer or participant."""

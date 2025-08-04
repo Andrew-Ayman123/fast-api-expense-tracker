@@ -26,13 +26,3 @@ class ExpenseParticipantRepositoryInterface(ABC):
     async def list_participants(self, expense_id: uuid.UUID) -> list[UserModel]:
         """List all participants for a specific expense."""
         ...
-
-    @abstractmethod
-    async def is_user_participant(self, expense_id: uuid.UUID, user_id: uuid.UUID) -> bool:
-        """Check if a user is a participant in a specific expense."""
-        ...
-
-    @abstractmethod
-    async def count_participants(self, expense_id: uuid.UUID) -> int:
-        """Count the number of participants for a specific expense."""
-        ...

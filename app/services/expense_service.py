@@ -18,6 +18,7 @@ from app.exceptions.expense_exception import (
     ExpensePayerNotInGroupError,
     ExpenseUpdateError,
 )
+from app.exceptions.group_exception import GroupMemberNotFoundError, GroupNotAuthorizedError
 from app.models import ExpenseCategoryEnum, ExpenseModel, UserModel
 from app.repositories.interfaces.expense_participants_interface import ExpenseParticipantRepositoryInterface
 from app.repositories.interfaces.expense_repository_interface import ExpenseRepositoryInterface
@@ -237,30 +238,62 @@ class ExpenseService:
     ) -> UserBalanceResponseData:
         """Get a user's balance in a group if the requesting user is a member."""
         if not await self.group_service.is_user_member_of_group(requesting_user_id, group_id):
-            raise ExpenseAccessDeniedError(requesting_user_id, group_id, "access balance in")
+            raise GroupNotAuthorizedError(requesting_user_id, group_id, "access balance in")
 
         # Check if target user is also a member of the group
         if not await self.group_service.is_user_member_of_group(target_user_id, group_id):
-            raise ExpenseAccessDeniedError(target_user_id, group_id, "get balance for")
+            raise GroupMemberNotFoundError(target_user_id, group_id)
 
-        # This would need to be implemented to calculate balances
-        # For now, return a placeholder response
-        # Note: Balance calculation logic needs to be implemented based on business requirements
+        # Get all expenses where the user is involved (as payer or participant)
+        user_expenses = await self.expense_repository.get_expenses_for_user_in_group(target_user_id, group_id)
+
+        net_balance = 0.0
+        expense_balances: dict[uuid.UUID, float] = {}
+
+        for expense in user_expenses:
+            # Get participants for this expense
+            participants = await self.expense_participant_repository.list_participants(expense.id)
+            participant_count = len(participants)
+
+            # Skip if no participants (shouldn't happen but safety check)
+            if participant_count == 0:
+                expense_balances[expense.id] = 0.0
+                continue
+
+            # Calculate per-person share
+            per_person_share = expense.amount / participant_count
+
+            # Check if user is the payer
+            is_payer = expense.payer_id == target_user_id
+
+            # Check if user is a participant
+            is_participant = any(participant.id == target_user_id for participant in participants)
+
+            if is_payer and is_participant:
+                # User paid for the expense and is also a participant
+                # They should receive (total - their share) from others
+                expense_balance = expense.amount - per_person_share
+            elif is_payer and not is_participant:
+                # User paid but is not a participant
+                # They should receive the full amount back
+                expense_balance = expense.amount
+            elif not is_payer and is_participant:
+                # User is a participant but didn't pay
+                # They owe their share (negative balance)
+                expense_balance = -per_person_share
+            else:
+                # User is neither payer nor participant (shouldn't happen given our query)
+                expense_balance = 0.0
+
+            expense_balances[expense.id] = expense_balance
+            net_balance += expense_balance
+
         return UserBalanceResponseData(
             user_id=target_user_id,
-            net_balance=0.0,
-            expenses={},
+            net_balance=net_balance,
+            expenses=expense_balances,
         )
-
-    # Helper methods following the group service pattern
-    async def is_user_expense_participant(self, user_id: uuid.UUID, expense_id: uuid.UUID) -> bool:
-        """Check if a user is a participant in an expense."""
-        return await self.expense_participant_repository.is_user_participant(expense_id, user_id)
 
     async def get_expense_participants(self, expense_id: uuid.UUID) -> list[UserModel]:
         """Get all participants of an expense."""
         return await self.expense_participant_repository.list_participants(expense_id)
-
-    async def get_expense_participant_count(self, expense_id: uuid.UUID) -> int:
-        """Get the number of participants in an expense."""
-        return await self.expense_participant_repository.count_participants(expense_id)

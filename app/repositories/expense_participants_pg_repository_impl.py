@@ -6,7 +6,7 @@ using SQLAlchemy ORM with async session.
 
 import uuid
 
-from sqlalchemy import delete, func
+from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
@@ -24,9 +24,6 @@ class ExpenseParticipantsPGRepository(ExpenseParticipantRepositoryInterface):
 
         Args:
             session (AsyncSession): An instance of SQLAlchemy AsyncSession for database operations.
-
-        Returns:
-            None
 
         """
         self.session = session
@@ -88,41 +85,3 @@ class ExpenseParticipantsPGRepository(ExpenseParticipantRepositoryInterface):
         )
         result = await self.session.execute(query)
         return list(result.scalars().all())
-
-    async def is_user_participant(self, expense_id: uuid.UUID, user_id: uuid.UUID) -> bool:
-        """Check if a user is a participant in a specific expense.
-
-        Args:
-            expense_id (uuid.UUID): The ID of the expense to check.
-            user_id (uuid.UUID): The ID of the user to check.
-
-        Returns:
-            bool: True if the user is a participant, False otherwise.
-
-        """
-        get_logger().debug("Checking if user %s is a participant in expense %s", user_id, expense_id)
-
-        query = select(ExpenseParticipantModel).where(
-            ExpenseParticipantModel.expense_id == expense_id,
-            ExpenseParticipantModel.user_id == user_id,
-        )
-        result = await self.session.execute(query)
-        return result.scalar_one_or_none() is not None
-
-    async def count_participants(self, expense_id: uuid.UUID) -> int:
-        """Count the number of participants for a specific expense.
-
-        Args:
-            expense_id (uuid.UUID): The ID of the expense to count participants for.
-
-        Returns:
-            int: The count of participants for the specified expense.
-
-        """
-        get_logger().debug("Counting participants for expense ID: %s", expense_id)
-
-        query = select(func.count(ExpenseParticipantModel.id)).where(
-            ExpenseParticipantModel.id == expense_id,
-        )
-        result = await self.session.execute(query)
-        return result.scalar_one()

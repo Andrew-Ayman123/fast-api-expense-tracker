@@ -79,3 +79,14 @@ class GroupMemberRoleUpdateError(ApplicationError):
         self.group_id = group_id
         formatted_message = f"{message} for user {user_id} in group {group_id}"
         super().__init__(formatted_message, status_code=status.HTTP_400_BAD_REQUEST)
+
+class GroupNotAuthorizedError(ApplicationError):
+    """Exception raised when a user is not authorized to perform an action on a group."""
+
+    def __init__(self, user_id: uuid.UUID, group_id: uuid.UUID, action: str = "access") -> None:
+        """Initialize with user ID, group ID, and action."""
+        self.user_id = user_id
+        self.group_id = group_id
+        self.action = action
+        message = f"User {self.user_id} is not authorized to {self.action} group {self.group_id}."
+        super().__init__(message, status_code=status.HTTP_403_FORBIDDEN)

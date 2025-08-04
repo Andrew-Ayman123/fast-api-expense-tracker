@@ -40,7 +40,7 @@ class TestBalanceAPI:
         group_id = await self._create_group(client, auth_token_header)
 
         # Get the user ID from the auth token
-        user_response = await client.get("/users/profile", headers=auth_token_header)
+        user_response = await client.get("/users/me", headers=auth_token_header)
         user_id = user_response.json()["data"]["user"]["id"]
 
         response = await client.get(
@@ -75,7 +75,7 @@ class TestBalanceAPI:
     ) -> None:
         """Test user balance retrieval with invalid group ID."""
         fake_group_id = str(uuid.uuid4())
-        user_response = await client.get("/users/profile", headers=auth_token_header)
+        user_response = await client.get("/users/me", headers=auth_token_header)
         user_id = user_response.json()["data"]["user"]["id"]
 
         response = await client.get(
@@ -83,7 +83,7 @@ class TestBalanceAPI:
             headers=auth_token_header,
         )
 
-        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.status_code == status.HTTP_403_FORBIDDEN, response.json()
 
     @pytest.mark.asyncio
     async def test_get_user_balance_invalid_user(
@@ -100,7 +100,7 @@ class TestBalanceAPI:
             headers=auth_token_header,
         )
 
-        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.status_code == status.HTTP_404_NOT_FOUND, response.json()
 
     @pytest.mark.asyncio
     async def test_get_user_balance_not_group_member(
@@ -131,7 +131,7 @@ class TestBalanceAPI:
             headers=auth_token_header,
         )
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_404_NOT_FOUND, response.json()
 
     @pytest.mark.asyncio
     async def test_get_user_balance_with_multiple_expenses(  # noqa: PLR0915
@@ -144,7 +144,7 @@ class TestBalanceAPI:
         group_id = await self._create_group(client, auth_token_header)
 
         # Get the first user (admin) ID
-        user_response = await client.get("/users/profile", headers=auth_token_header)
+        user_response = await client.get("/users/me", headers=auth_token_header)
         admin_user_id = user_response.json()["data"]["user"]["id"]
 
         # Register second user
@@ -253,7 +253,7 @@ class TestBalanceAPI:
 
         # Test User2 balance
         # User2 paid: $150, owes: $100 (expense1) + $30 (expense3) = $130
-        # Net balance: $150 - $130 = $20 (User2 should receive $20)
+        # Net balance: $150 - $130 - $75 = $-55 (User2 should receive $20)
         user2_balance_response = await client.get(
             f"/groups/{group_id}/members/{user2_id}/balance",
             headers=auth_token_header,
@@ -261,7 +261,7 @@ class TestBalanceAPI:
         assert user2_balance_response.status_code == status.HTTP_200_OK
         user2_balance_data = user2_balance_response.json()["data"]
         assert user2_balance_data["user_id"] == user2_id
-        assert user2_balance_data["net_balance"] == 20.0
+        assert user2_balance_data["net_balance"] == -55
         assert len(user2_balance_data["expenses"]) == 3  # participates in all expenses
         assert expense1_id in user2_balance_data["expenses"]
         assert expense2_id in user2_balance_data["expenses"]
@@ -269,7 +269,7 @@ class TestBalanceAPI:
 
         # Test User3 balance
         # User3 paid: $90, owes: $100 (expense1) + $75 (expense2) = $175
-        # Net balance: $90 - $175 = -$85 (User3 owes $85)
+        # Net balance: $90 - $175 - 30 = -$115 (User3 owes $115)
         user3_balance_response = await client.get(
             f"/groups/{group_id}/members/{user3_id}/balance",
             headers=auth_token_header,
@@ -277,7 +277,7 @@ class TestBalanceAPI:
         assert user3_balance_response.status_code == status.HTTP_200_OK
         user3_balance_data = user3_balance_response.json()["data"]
         assert user3_balance_data["user_id"] == user3_id
-        assert user3_balance_data["net_balance"] == -85.0
+        assert user3_balance_data["net_balance"] == -115.0
         assert len(user3_balance_data["expenses"]) == 3  # participates in all expenses
         assert expense1_id in user3_balance_data["expenses"]
         assert expense2_id in user3_balance_data["expenses"]

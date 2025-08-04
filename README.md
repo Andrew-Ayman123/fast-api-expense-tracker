@@ -40,7 +40,7 @@ source .venv/bin/activate
 ### 3. Install dependencies
 
 ```bash
-uv pip install .
+uv sync
 ```
 
 ---

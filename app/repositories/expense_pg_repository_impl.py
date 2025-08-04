@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from app.models import ExpenseCategoryEnum, ExpenseModel
+from app.models.expense_participants_model import ExpenseParticipantModel
 from app.repositories.interfaces.expense_repository_interface import ExpenseRepositoryInterface
 from app.utils.logger_util import get_logger
 
@@ -204,3 +205,45 @@ class ExpensePGRepository(ExpenseRepositoryInterface):
         count = result.scalar_one_or_none()
         get_logger().debug("Counting expenses for group ID: %s, found: %s", group_id, count)
         return count or 0
+
+    async def get_expenses_for_user_in_group(
+        self,
+        user_id: uuid.UUID,
+        group_id: uuid.UUID,
+    ) -> list[ExpenseModel]:
+        """Get all expenses in a group where the user is either a payer or participant.
+
+        Args:
+            user_id (uuid.UUID): The ID of the user.
+            group_id (uuid.UUID): The ID of the group.
+
+        Returns:
+            list[ExpenseModel]: List of expenses where the user is involved.
+
+        """
+        # Query for expenses where user is either payer or participant
+        query = (
+            select(ExpenseModel)
+            .where(ExpenseModel.group_id == group_id)
+            .where(
+                (ExpenseModel.payer_id == user_id)
+                | (
+                    ExpenseModel.id.in_(
+                        select(ExpenseParticipantModel.expense_id).where(
+                            ExpenseParticipantModel.user_id == user_id,
+                        ),
+                    )
+                ),
+            )
+            .order_by(ExpenseModel.created_at.desc())
+        )
+
+        result = await self.session.execute(query)
+        expenses = list(result.scalars().all())
+        get_logger().debug(
+            "Retrieved %s expenses for user ID: %s in group ID: %s",
+            len(expenses),
+            user_id,
+            group_id,
+        )
+        return expenses
