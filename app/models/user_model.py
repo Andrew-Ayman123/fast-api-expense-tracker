@@ -39,6 +39,9 @@ class UserModel(Base):
         onupdate=func.now(),
     )
 
-    group_membership = relationship("GroupMemberModel", back_populates="user")
+    group_membership = relationship("GroupMemberModel", back_populates="user", passive_deletes=True)
     expenses_paid = relationship("ExpenseModel", back_populates="payer")
     created_groups = relationship("GroupModel", back_populates="creator")
+    expense_participants = relationship(
+        "ExpenseParticipantModel", back_populates="user", cascade="all, delete-orphan", passive_deletes=True,
+    )

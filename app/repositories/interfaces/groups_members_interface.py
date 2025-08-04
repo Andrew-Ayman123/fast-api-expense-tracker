@@ -6,15 +6,16 @@ This module defines the abstract interface for GroupMember repository operations
 import uuid
 from abc import ABC, abstractmethod
 
-from app.models.group_members_model import GroupMemberModel
-from app.models.group_members_role_enum import GroupMembersRoleEnum
+from app.models import GroupMemberModel, GroupMembersRoleEnum
 
 
 class GroupMemberRepositoryInterface(ABC):
     """Abstract base class for group member repository operations."""
 
     @abstractmethod
-    async def add_member(self, user_id: uuid.UUID, group_id: uuid.UUID) -> GroupMemberModel | None:
+    async def add_member(
+        self, user_id: uuid.UUID, group_id: uuid.UUID, role: GroupMembersRoleEnum,
+    ) -> GroupMemberModel | None:
         """Add a user as a member to a group."""
 
     @abstractmethod
@@ -27,7 +28,10 @@ class GroupMemberRepositoryInterface(ABC):
 
     @abstractmethod
     async def update_member_role(
-        self, user_id: uuid.UUID, group_id: uuid.UUID, new_role: str,
+        self,
+        user_id: uuid.UUID,
+        group_id: uuid.UUID,
+        new_role: str,
     ) -> GroupMemberModel | None:
         """Update the role of a member in a group."""
 

@@ -6,15 +6,9 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, Request
 
 from app.dependencies.services_dependencies import get_group_service
-from app.exceptions.group_exception import (
-    GroupMemberAlreadyExistsError,
-    GroupMemberNotFoundError,
-    GroupNotFoundError,
-)
-from app.exceptions.user_exception import UserIDNotFoundError, UserNotAuthorizedError
+from app.exceptions.application_exception import ApplicationError
 from app.middleware.jwt_auth_middleware import get_current_user_id
 from app.middleware.user_admin_middleware import verify_user_admin_role
-from app.models.group_model import GroupModel
 from app.schemas.group_schema import (
     GroupCreateData,
     GroupCreateRequest,
@@ -42,12 +36,6 @@ from app.utils.logger_util import get_logger
 
 # versioning is handled in the main file
 router = APIRouter(prefix="/groups", tags=["groups"])
-
-
-def _convert_group_to_data(group: GroupModel) -> GroupData:
-    """Convert GroupModel to GroupData schema using from_attributes."""
-    return GroupData.model_validate(group, from_attributes=True)
-
 
 @router.post("")
 async def create_group(
@@ -79,11 +67,13 @@ async def create_group(
         group_data_obj = GroupData.model_validate(group_dict, from_attributes=True)
         create_data = GroupCreateData(group=group_data_obj)
         return GroupCreateResponse(data=create_data)
+    except ApplicationError as e:
+        raise e.to_http_exception() from e
     except Exception as e:
         get_logger().error("Error creating group: %s", str(e))
         raise create_http_exception(
             message="Failed to create group",
-            status_code=400,
+            status_code=500,
             details={"error": str(e)},
         ) from e
 
@@ -129,11 +119,13 @@ async def list_groups(
 
         list_data = GroupListData(groups=groups_data, pagination=pagination)
         return GroupListResponse(data=list_data)
+    except ApplicationError as e:
+        raise e.to_http_exception() from e
     except Exception as e:
         get_logger().error("Error retrieving groups: %s", str(e))
         raise create_http_exception(
             message="Failed to retrieve groups",
-            status_code=400,
+            status_code=500,
             details={"error": str(e)},
         ) from e
 
@@ -173,23 +165,13 @@ async def get_group(
 
         detail_data = GroupDetailData(group=group_data)
         return GroupDetailResponse(data=detail_data)
-    except GroupNotFoundError as e:
-        raise create_http_exception(
-            message="Group not found",
-            status_code=404,
-            details={"group_id": str(group_id)},
-        ) from e
-    except UserNotAuthorizedError as e:
-        raise create_http_exception(
-            message="User is not a member of this group",
-            status_code=403,
-            details={"error": str(e)},
-        ) from e
+    except ApplicationError as e:
+        raise e.to_http_exception() from e
     except Exception as e:
         get_logger().error("Error retrieving group: %s", str(e))
         raise create_http_exception(
             message="Failed to retrieve group",
-            status_code=400,
+            status_code=500,
             details={"error": str(e)},
         ) from e
 
@@ -233,23 +215,13 @@ async def update_group(
         update_data = GroupCreateData(group=updated_group_data)
 
         return GroupUpdateResponse(data=update_data)
-    except GroupNotFoundError as e:
-        raise create_http_exception(
-            message="Group not found",
-            status_code=404,
-            details={"group_id": str(group_id)},
-        ) from e
-    except UserNotAuthorizedError as e:
-        raise create_http_exception(
-            message="Only group admin can update group",
-            status_code=403,
-            details={"error": str(e)},
-        ) from e
+    except ApplicationError as e:
+        raise e.to_http_exception() from e
     except Exception as e:
         get_logger().error("Error updating group: %s", str(e))
         raise create_http_exception(
             message="Failed to update group",
-            status_code=400,
+            status_code=500,
             details={"error": str(e)},
         ) from e
 
@@ -303,23 +275,13 @@ async def list_group_members(
 
         list_data = GroupMembersListData(members=members_data, pagination=pagination)
         return GroupMembersListResponse(data=list_data)
-    except GroupNotFoundError as e:
-        raise create_http_exception(
-            message="Group not found",
-            status_code=404,
-            details={"group_id": str(group_id)},
-        ) from e
-    except UserNotAuthorizedError as e:
-        raise create_http_exception(
-            message="User is not a member of this group",
-            status_code=403,
-            details={"error": str(e)},
-        ) from e
+    except ApplicationError as e:
+        raise e.to_http_exception() from e
     except Exception as e:
         get_logger().error("Error retrieving group members: %s", str(e))
         raise create_http_exception(
             message="Failed to retrieve group members",
-            status_code=400,
+            status_code=500,
             details={"error": str(e)},
         ) from e
 
@@ -359,35 +321,13 @@ async def add_group_member(
         add_data = GroupMemberAddData(member=member_data_obj)
 
         return GroupMemberAddResponse(data=add_data)
-    except GroupNotFoundError as e:
-        raise create_http_exception(
-            message="Group not found",
-            status_code=404,
-            details={"group_id": str(group_id)},
-        ) from e
-    except UserIDNotFoundError as e:
-        raise create_http_exception(
-            message="User not found",
-            status_code=404,
-            details={"error": str(e)},
-        ) from e
-    except GroupMemberAlreadyExistsError as e:
-        raise create_http_exception(
-            message="User already in group",
-            status_code=400,
-            details={"error": str(e)},
-        ) from e
-    except UserNotAuthorizedError as e:
-        raise create_http_exception(
-            message="Only group admin can add members",
-            status_code=403,
-            details={"error": str(e)},
-        ) from e
+    except ApplicationError as e:
+        raise e.to_http_exception() from e
     except Exception as e:
         get_logger().error("Error adding group member: %s", str(e))
         raise create_http_exception(
             message="Failed to add group member",
-            status_code=400,
+            status_code=500,
             details={"error": str(e)},
         ) from e
 
@@ -423,42 +363,26 @@ async def update_member_role(
         member_user_id = await get_id_from_path(request, "user_id")
 
         await group_service.update_member_role(group_id, member_user_id, role_data.role)
-    except GroupNotFoundError as e:
-        raise create_http_exception(
-            message="Group not found",
-            status_code=404,
-            details={"group_id": str(group_id)},
-        ) from e
-    except GroupMemberNotFoundError as e:
-        raise create_http_exception(
-            message="Member not found in group",
-            status_code=404,
-            details={"error": str(e)},
-        ) from e
-    except UserNotAuthorizedError as e:
-        raise create_http_exception(
-            message="Only group admin can update member roles",
-            status_code=403,
-            details={"error": str(e)},
-        ) from e
+    except ApplicationError as e:
+        raise e.to_http_exception() from e
     except Exception as e:
         get_logger().error("Error updating member role: %s", str(e))
         raise create_http_exception(
             message="Failed to update member role",
-            status_code=400,
+            status_code=500,
             details={"error": str(e)},
         ) from e
     else:
         return {"message": "Member role updated successfully"}
 
 
-@router.delete("/{group_id}/members/{user_id}")
+@router.delete("/{group_id}/members/{user_id}",status_code=204)
 async def remove_group_member(
     request: Request,
     current_user_id: Annotated[uuid.UUID, Depends(get_current_user_id)],
     group_service: Annotated[GroupService, Depends(get_group_service)],
     _: Annotated[None, Depends(verify_user_admin_role)],
-) -> dict:
+) -> None:
     """Remove a member from a group.
 
     Args:
@@ -467,8 +391,6 @@ async def remove_group_member(
         group_service (GroupService): The group service instance.
         _ : User admin role verification dependency.
 
-    Returns:
-        dict: Success message.
 
     Raises:
         400 Bad Request: If there is an error during member removal.
@@ -482,42 +404,24 @@ async def remove_group_member(
         member_user_id = await get_id_from_path(request, "user_id")
 
         await group_service.remove_member(group_id, member_user_id, current_user_id)
-    except GroupNotFoundError as e:
-        raise create_http_exception(
-            message="Group not found",
-            status_code=404,
-            details={"group_id": str(group_id)},
-        ) from e
-    except GroupMemberNotFoundError as e:
-        raise create_http_exception(
-            message="Member not found in group",
-            status_code=404,
-            details={"error": str(e)},
-        ) from e
-    except UserNotAuthorizedError as e:
-        raise create_http_exception(
-            message="Only group admin can remove members",
-            status_code=403,
-            details={"error": str(e)},
-        ) from e
+    except ApplicationError as e:
+        raise e.to_http_exception() from e
     except Exception as e:
         get_logger().error("Error removing group member: %s", str(e))
         raise create_http_exception(
             message="Failed to remove group member",
-            status_code=400,
+            status_code=500,
             details={"error": str(e)},
         ) from e
-    else:
-        return {"message": "Member removed successfully"}
 
 
-@router.delete("/{group_id}")
+@router.delete("/{group_id}",status_code=204)
 async def delete_group(
     request: Request,
     current_user_id: Annotated[uuid.UUID, Depends(get_current_user_id)],
     group_service: Annotated[GroupService, Depends(get_group_service)],
     _: Annotated[None, Depends(verify_user_admin_role)],
-) -> dict:
+) -> None:
     """Delete a group (only allowed by admin).
 
     Args:
@@ -525,9 +429,6 @@ async def delete_group(
         current_user_id (uuid.UUID): The authenticated user's ID from JWT token.
         group_service (GroupService): The group service instance.
         _ : User admin role verification dependency.
-
-    Returns:
-        dict: Success message.
 
     Raises:
         400 Bad Request: If there is an error during group deletion.
@@ -539,24 +440,12 @@ async def delete_group(
     try:
         group_id = await get_id_from_path(request, "group_id")
         await group_service.delete_group(group_id, current_user_id)
-    except GroupNotFoundError as e:
-        raise create_http_exception(
-            message="Group not found",
-            status_code=404,
-            details={"group_id": str(group_id)},
-        ) from e
-    except UserNotAuthorizedError as e:
-        raise create_http_exception(
-            message="Only group admin can delete group",
-            status_code=403,
-            details={"error": str(e)},
-        ) from e
+    except ApplicationError as e:
+        raise e.to_http_exception() from e
     except Exception as e:
         get_logger().error("Error deleting group: %s", str(e))
         raise create_http_exception(
             message="Failed to delete group",
-            status_code=400,
+            status_code=500,
             details={"error": str(e)},
         ) from e
-    else:
-        return {"message": "Group deleted successfully"}

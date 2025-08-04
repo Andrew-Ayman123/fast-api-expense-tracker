@@ -18,7 +18,7 @@ class GroupData(BaseModel):
     created_at: datetime
     updated_at: datetime
     member_count: int
-    user_role: str  # "admin" or "member"
+    user_role: str  = Field(..., pattern="^(Admin|Member)$")
 
     class Config:
         """Pydantic model configuration."""
@@ -34,7 +34,7 @@ class GroupMemberData(BaseModel):
     id: UUID
     email: str
     username: str
-    role: str  # "admin" or "member"
+    role: str  = Field(..., pattern="^(Admin|Member)$")
 
     class Config:
         """Pydantic model configuration."""
@@ -70,13 +70,13 @@ class GroupMemberAddRequest(BaseModel):
     """Schema for adding a member to a group."""
 
     email: str
-    role: str = Field(..., pattern="^(admin|member)$")
+    role: str = Field(..., pattern="^(Admin|Member)$")
 
 
 class GroupMemberRoleUpdateRequest(BaseModel):
     """Schema for updating a member's role."""
 
-    role: str = Field(..., pattern="^(admin|member)$")
+    role: str = Field(..., pattern="^(Admin|Member)$")
 
 
 # Response Data Schemas

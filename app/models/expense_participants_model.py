@@ -16,13 +16,13 @@ class ExpenseParticipantModel(Base):
 
     __tablename__ = "expense_participants"
     __table_args__ = (
-        UniqueConstraint("user_id", "group_id", name="uq_user_group_participation"),
+        UniqueConstraint("user_id", "expense_id", name="uq_user_expense_participation"),
     )
 
     id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
-    group_id: Mapped[UUID] = mapped_column(ForeignKey("groups.id"), nullable=False)
+    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    expense_id: Mapped[UUID] = mapped_column(ForeignKey("expenses.id", ondelete="CASCADE"), nullable=False)
 
 
-    user = relationship("UserModel", back_populates="expense_participation")
-    group = relationship("GroupModel", back_populates="expense_participants")
+    user = relationship("UserModel", back_populates="expense_participants", passive_deletes=True)
+    expense = relationship("ExpenseModel", back_populates="participants", passive_deletes=True)

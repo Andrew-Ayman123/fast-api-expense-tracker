@@ -93,16 +93,3 @@ async def reset_user_data_function() -> AsyncGenerator[None, None]:
         await session.execute(text("DELETE FROM users"))
         await session.commit()
         yield
-
-
-@pytest_asyncio.fixture(scope="function")
-async def reset_group_data_function() -> AsyncGenerator[None, None]:
-    """Reset group and related data in the database for function scope tests."""
-    async with get_session_maker(get_database_engine())() as session:
-        # Delete in correct order due to foreign key constraints
-        await session.execute(text("DELETE FROM expenses"))
-        await session.execute(text("DELETE FROM group_members"))
-        await session.execute(text("DELETE FROM groups"))
-        await session.execute(text("DELETE FROM users"))
-        await session.commit()
-        yield

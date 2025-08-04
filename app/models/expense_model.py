@@ -5,7 +5,7 @@ Defines the ExpenseModel for managing expense-related data.
 
 import uuid
 
-from sqlalchemy import Date, DateTime, Enum, Float, ForeignKey, String, UniqueConstraint
+from sqlalchemy import Date, DateTime, Enum, Float, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
@@ -19,10 +19,6 @@ class ExpenseModel(Base):
 
     __tablename__ = "expenses"
 
-    __table_args__ = (
-        UniqueConstraint("group_id", "payer_id", name="uq_group_expense_payer"),
-    )
-
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         primary_key=True,
@@ -33,7 +29,7 @@ class ExpenseModel(Base):
 
     group_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("groups.id"),
+        ForeignKey("groups.id", ondelete="CASCADE"),
         nullable=False,
     )
 
@@ -42,12 +38,11 @@ class ExpenseModel(Base):
         nullable=False,
     )
 
-
     amount: Mapped[float] = mapped_column(Float, nullable=False)
 
     payer_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("users.id"),
+        ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
 
@@ -60,7 +55,6 @@ class ExpenseModel(Base):
         Date,
         nullable=False,
     )
-
 
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True),
@@ -76,4 +70,8 @@ class ExpenseModel(Base):
 
     payer = relationship("UserModel", back_populates="expenses_paid")
     group = relationship("GroupModel", back_populates="expenses")
-
+    participants = relationship(
+        "ExpenseParticipantModel",
+        back_populates="expense",
+        passive_deletes=True,
+    )

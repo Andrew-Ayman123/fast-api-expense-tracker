@@ -6,13 +6,9 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 
 from app.dependencies.services_dependencies import get_jwt_service, get_user_service
-from app.exceptions.user_exception import (
-    UserAlreadyExistsError,
-    UserIDNotFoundError,
-    WrongEmailOrPasswordError,
-)
+from app.exceptions.application_exception import ApplicationError
 from app.middleware.jwt_auth_middleware import get_current_user_id
-from app.models.user_model import UserModel
+from app.models import UserModel
 from app.schemas.user_schema import (
     RefreshTokenRequest,
     TokenRefreshData,
@@ -70,17 +66,13 @@ async def register_user(
         user_with_tokens = UserWithTokensData(user=user_data_obj, token=token, refresh_token=refresh_token)
 
         return UserRegisterResponse(data=user_with_tokens)
-    except UserAlreadyExistsError as e:
-        raise create_http_exception(
-            message="User already exists",
-            status_code=409,
-            details={"error": str(e)},
-        ) from e
+    except ApplicationError as e:
+        raise e.to_http_exception() from e
     except Exception as e:
         get_logger().error("Error creating user: %s", str(e))
         raise create_http_exception(
             message="Failed to create user",
-            status_code=400,
+            status_code=500,
             details={"error": str(e)},
         ) from e
 
@@ -115,16 +107,12 @@ async def login_user(
         user_with_tokens = UserWithTokensData(user=user_data_obj, token=token, refresh_token=refresh_token)
 
         return UserLoginResponse(data=user_with_tokens)
-    except WrongEmailOrPasswordError as e:
-        raise create_http_exception(
-            message="Login failed",
-            status_code=401,
-            details= {"error": str(e)},
-        ) from e
+    except ApplicationError as e:
+        raise e.to_http_exception() from e
     except Exception as e:
         raise create_http_exception(
             message="Login failed",
-            status_code=400,
+            status_code=500,
             details={"error": str(e)},
         ) from e
 
@@ -156,16 +144,12 @@ async def get_user_by_id(
         user_profile_data = UserProfileData(user=user_data_obj)
 
         return UserProfileResponse(data=user_profile_data)
-    except UserIDNotFoundError as e:
-        raise create_http_exception(
-            message="User not found",
-            status_code=404,
-            details={"user_id": str(current_user_id)},
-        ) from e
+    except ApplicationError as e:
+        raise e.to_http_exception() from e
     except Exception as e:
         raise create_http_exception(
             message="Failed to retrieve user profile",
-            status_code=400,
+            status_code=500,
             details={"error": str(e)},
         ) from e
 
@@ -206,22 +190,11 @@ async def refresh_token(
         token_data = TokenRefreshData(token=new_token, refresh_token=new_refresh_token)
 
         return TokenRefreshResponse(data=token_data)
-    except ValueError as e:
-        # JWT decode errors (expired, invalid)
-        raise create_http_exception(
-            message="Unauthorized",
-            status_code=401,
-            details={"error": str(e)},
-        ) from e
-    except UserIDNotFoundError as e:
-        raise create_http_exception(
-            message="User not found",
-            status_code=404,
-            details={"error": str(e)},
-        ) from e
+    except ApplicationError as e:
+        raise e.to_http_exception() from e
     except Exception as e:
         raise create_http_exception(
             message="Token refresh failed",
-            status_code=400,
+            status_code=500,
             details={"error": str(e)},
         ) from e

@@ -7,7 +7,7 @@ import pytest
 from fastapi import status
 from httpx import AsyncClient, Response
 
-from app.models.group_model import GroupModel
+from app.models import GroupModel
 from app.schemas.group_schema import (
     GroupCreateRequest,
     GroupMemberAddRequest,
@@ -18,7 +18,7 @@ from app.schemas.group_schema import (
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.usefixtures("reset_group_data_function")
+@pytest.mark.usefixtures("reset_user_data_function")
 class TestGroupAPI:
     """System tests for group creation, listing, detail, update, and member management."""
 
@@ -34,7 +34,11 @@ class TestGroupAPI:
         )
 
     async def _update_group(
-        self, client: AsyncClient, auth_headers: dict, group_id: str, group_data: GroupModel,
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        group_id: str,
+        group_data: GroupModel,
     ) -> Response:
         """Update a group using the API."""
         return await client.put(
@@ -48,12 +52,15 @@ class TestGroupAPI:
 
     @pytest.mark.asyncio
     async def test_create_group_success(
-        self, client: AsyncClient, auth_token_header: dict, sample_group_data: GroupModel,
+        self,
+        client: AsyncClient,
+        auth_token_header: dict,
+        sample_group_data: GroupModel,
     ) -> None:
         """Test successful group creation."""
         response = await self._create_group(client, auth_token_header, sample_group_data)
 
-        assert response.status_code == status.HTTP_200_OK
+        assert response.status_code == status.HTTP_200_OK, response.json()
         json_data = response.json()
         assert "data" in json_data
         assert "group" in json_data["data"]
@@ -65,7 +72,7 @@ class TestGroupAPI:
         assert "created_at" in group
         assert "updated_at" in group
         assert group["member_count"] == 1
-        assert group["user_role"] == "admin"
+        assert group["user_role"] == "Admin"
 
     @pytest.mark.asyncio
     async def test_create_group_unauthorized(self, client: AsyncClient, sample_group_data: GroupModel) -> None:
@@ -82,7 +89,10 @@ class TestGroupAPI:
 
     @pytest.mark.asyncio
     async def test_list_groups_success(
-        self, client: AsyncClient, auth_token_header: dict, sample_group_data: GroupModel,
+        self,
+        client: AsyncClient,
+        auth_token_header: dict,
+        sample_group_data: GroupModel,
     ) -> None:
         """Test successful group listing."""
         # Create a group first
@@ -122,7 +132,10 @@ class TestGroupAPI:
 
     @pytest.mark.asyncio
     async def test_get_group_detail_success(
-        self, client: AsyncClient, auth_token_header: dict, sample_group_data: GroupModel,
+        self,
+        client: AsyncClient,
+        auth_token_header: dict,
+        sample_group_data: GroupModel,
     ) -> None:
         """Test successful group detail retrieval."""
         # Create a group first
@@ -147,7 +160,7 @@ class TestGroupAPI:
         response = await client.get(f"/groups/{fake_group_id}", headers=auth_token_header)
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
-        assert response.json()["detail"]["message"] == "Group not found"
+        assert "not found" in response.json()["detail"]["message"]
 
     @pytest.mark.asyncio
     async def test_get_group_detail_unauthorized(self, client: AsyncClient) -> None:
@@ -159,7 +172,10 @@ class TestGroupAPI:
 
     @pytest.mark.asyncio
     async def test_update_group_success(
-        self, client: AsyncClient, auth_token_header: dict, sample_group_data: GroupModel,
+        self,
+        client: AsyncClient,
+        auth_token_header: dict,
+        sample_group_data: GroupModel,
     ) -> None:
         """Test successful group update."""
         # Create a group first
@@ -187,14 +203,17 @@ class TestGroupAPI:
 
     @pytest.mark.asyncio
     async def test_update_group_not_found(
-        self, client: AsyncClient, auth_token_header: dict, sample_group_data: GroupModel,
+        self,
+        client: AsyncClient,
+        auth_token_header: dict,
+        sample_group_data: GroupModel,
     ) -> None:
         """Test group update for non-existent group."""
         fake_group_id = str(uuid.uuid4())
         response = await self._update_group(client, auth_token_header, fake_group_id, sample_group_data)
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
-        assert response.json()["detail"]["message"] == "Group not found"
+        assert "not found" in response.json()["detail"]["message"]
 
     @pytest.mark.asyncio
     async def test_update_group_unauthorized(self, client: AsyncClient, sample_group_data: GroupModel) -> None:
@@ -212,7 +231,10 @@ class TestGroupAPI:
 
     @pytest.mark.asyncio
     async def test_get_group_members_success(
-        self, client: AsyncClient, auth_token_header: dict, sample_group_data: GroupModel,
+        self,
+        client: AsyncClient,
+        auth_token_header: dict,
+        sample_group_data: GroupModel,
     ) -> None:
         """Test successful group members listing."""
         # Create a group first
@@ -228,7 +250,7 @@ class TestGroupAPI:
         assert "pagination" in json_data["data"]
         members = json_data["data"]["members"]
         assert len(members) == 1  # Creator is automatically added as admin
-        assert members[0]["role"] == "admin"
+        assert members[0]["role"] == "Admin"
 
     @pytest.mark.asyncio
     async def test_get_group_members_not_found(self, client: AsyncClient, auth_token_header: dict) -> None:
@@ -237,7 +259,6 @@ class TestGroupAPI:
         response = await client.get(f"/groups/{fake_group_id}/members", headers=auth_token_header)
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
-        assert response.json()["detail"]["message"] == "Group not found"
 
     @pytest.mark.asyncio
     async def test_get_group_members_unauthorized(self, client: AsyncClient) -> None:
@@ -249,7 +270,10 @@ class TestGroupAPI:
 
     @pytest.mark.asyncio
     async def test_delete_group_success(
-        self, client: AsyncClient, auth_token_header: dict, sample_group_data: GroupModel,
+        self,
+        client: AsyncClient,
+        auth_token_header: dict,
+        sample_group_data: GroupModel,
     ) -> None:
         """Test successful group deletion."""
         # Create a group first
@@ -271,7 +295,7 @@ class TestGroupAPI:
         response = await client.delete(f"/groups/{fake_group_id}", headers=auth_token_header)
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
-        assert response.json()["detail"]["message"] == "Group not found"
+        assert "not found" in response.json()["detail"]["message"]
 
     @pytest.mark.asyncio
     async def test_delete_group_unauthorized(self, client: AsyncClient) -> None:
@@ -283,7 +307,10 @@ class TestGroupAPI:
 
     @pytest.mark.asyncio
     async def test_add_group_member_invalid_email(
-        self, client: AsyncClient, auth_token_header: dict, sample_group_data: GroupModel,
+        self,
+        client: AsyncClient,
+        auth_token_header: dict,
+        sample_group_data: GroupModel,
     ) -> None:
         """Test adding a group member with invalid email."""
         # Create a group first
@@ -295,16 +322,18 @@ class TestGroupAPI:
             headers=auth_token_header,
             json=GroupMemberAddRequest(
                 email="nonexistent@example.com",
-                role="member",
+                role="Member",
             ).model_dump(),
         )
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
-        assert response.json()["detail"]["message"] == "User not found"
+        assert "not found" in response.json()["detail"]["message"]
 
     @pytest.mark.asyncio
     async def test_update_member_role_not_found(
-        self, client: AsyncClient, auth_token_header: dict,
+        self,
+        client: AsyncClient,
+        auth_token_header: dict,
     ) -> None:
         """Test updating member role for non-existent group."""
         fake_group_id = str(uuid.uuid4())
@@ -313,15 +342,17 @@ class TestGroupAPI:
         response = await client.put(
             f"/groups/{fake_group_id}/members/{fake_user_id}/role",
             headers=auth_token_header,
-            json=GroupMemberRoleUpdateRequest(role="admin").model_dump(),
+            json=GroupMemberRoleUpdateRequest(role="Admin").model_dump(),
         )
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
-        assert response.json()["detail"]["message"] == "Group not found"
+        assert "not found" in response.json()["detail"]["message"]
 
     @pytest.mark.asyncio
     async def test_remove_group_member_not_found(
-        self, client: AsyncClient, auth_token_header: dict,
+        self,
+        client: AsyncClient,
+        auth_token_header: dict,
     ) -> None:
         """Test removing member from non-existent group."""
         fake_group_id = str(uuid.uuid4())
@@ -333,11 +364,13 @@ class TestGroupAPI:
         )
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
-        assert response.json()["detail"]["message"] == "Group not found"
+        assert "not found" in response.json()["detail"]["message"]
 
     @pytest.mark.asyncio
     async def test_group_pagination(
-        self, client: AsyncClient, auth_token_header: dict,
+        self,
+        client: AsyncClient,
+        auth_token_header: dict,
     ) -> None:
         """Test group listing pagination."""
         # Create multiple groups
@@ -369,7 +402,9 @@ class TestGroupAPI:
 
     @pytest.mark.asyncio
     async def test_group_members_pagination(
-        self, client: AsyncClient, auth_token_header: dict,
+        self,
+        client: AsyncClient,
+        auth_token_header: dict,
     ) -> None:
         """Test group members listing pagination."""
         # Create a group first

@@ -9,11 +9,17 @@ import uuid
 
 from sqlalchemy.exc import IntegrityError
 
-from app.exceptions.group_exception import GroupNotFoundError
-from app.exceptions.user_exception import UserIDNotFoundError, UserNotAuthorizedError
-from app.models.group_members_role_enum import GroupMembersRoleEnum
-from app.models.group_model import GroupModel
-from app.models.user_model import UserModel
+from app.exceptions.group_exception import (
+    GroupCreationError,
+    GroupMemberAddError,
+    GroupMemberNotFoundError,
+    GroupMemberRemoveError,
+    GroupMemberRoleUpdateError,
+    GroupNotFoundError,
+    GroupOwnerCannotLeaveError,
+)
+from app.exceptions.user_exception import UserEmailNotFoundError, UserIDNotFoundError, UserNotAuthorizedError
+from app.models import GroupMembersRoleEnum, GroupModel, UserModel
 from app.repositories.interfaces.groups_members_interface import GroupMemberRepositoryInterface
 from app.repositories.interfaces.groups_repository_interface import GroupRepositoryInterface
 from app.repositories.interfaces.user_repository_interface import UserRepositoryInterface
@@ -39,7 +45,9 @@ class GroupService:
         self.user_repository = user_repository
 
     async def create_group(
-        self, group_data: GroupCreateRequest, created_by_id: uuid.UUID,
+        self,
+        group_data: GroupCreateRequest,
+        created_by_id: uuid.UUID,
     ) -> tuple[GroupModel, int, GroupMembersRoleEnum]:
         """Create a new group and add the creator as an admin."""
         try:
@@ -50,25 +58,19 @@ class GroupService:
             )
 
             if not group:
-                msg = "Failed to create group"
-                raise RuntimeError(msg)
+                raise GroupCreationError
 
             await self.group_member_repository.add_member(
                 user_id=created_by_id,
                 group_id=group.id,
+                role=GroupMembersRoleEnum.ADMIN,
             )
-            await self.group_member_repository.update_member_role(
-                user_id=created_by_id,
-                group_id=group.id,
-                new_role=GroupMembersRoleEnum.ADMIN.value,
-            )
-
             # Get member count for the response
             member_count = await self.group_member_repository.count_members_in_group(group.id)
 
         except IntegrityError as e:
             msg = f"Failed to create group: {e!s}"
-            raise RuntimeError(msg) from e
+            raise GroupCreationError(msg) from e
         else:
             return (group, member_count, GroupMembersRoleEnum.ADMIN)
 
@@ -164,16 +166,15 @@ class GroupService:
         """Add a new member to a group if the requesting user is an admin."""
         user_to_add = await self.user_repository.get_user_by_email(member_data.email)
         if not user_to_add:
-            msg = f"User with email {member_data.email} not found"
-            raise ValueError(msg)
+            raise UserEmailNotFoundError(member_data.email)
 
         member = await self.group_member_repository.add_member(
             user_id=user_to_add.id,
             group_id=group_id,
+            role=GroupMembersRoleEnum(member_data.role),
         )
         if not member:
-            msg = f"Failed to add user {member_data.email} to group {group_id}"
-            raise RuntimeError(msg)
+            raise GroupMemberAddError(member_data.email, group_id)
 
         return (user_to_add, member.role)
 
@@ -187,14 +188,12 @@ class GroupService:
         if requesting_user_id == member_user_id:
             group = await self.group_repository.get_group_by_id(group_id)
             if group and group.created_by == requesting_user_id:
-                msg = f"User {requesting_user_id} is the creator of the group and cannot be removed."
-                raise ValueError(msg)
+                raise GroupOwnerCannotLeaveError(requesting_user_id, group_id)
 
         is_removed = await self.group_member_repository.remove_member(member_user_id, group_id)
 
         if not is_removed:
-            msg = f"Failed to remove user {member_user_id} from group {group_id}"
-            raise RuntimeError(msg)
+            raise GroupMemberRemoveError(member_user_id, group_id)
 
     async def update_member_role(
         self,
@@ -209,8 +208,7 @@ class GroupService:
             new_role=new_role,
         )
         if not updated_member:
-            msg = f"Failed to update role for user {member_user_id} in group {group_id}"
-            raise RuntimeError(msg)
+            raise GroupMemberRoleUpdateError(member_user_id, group_id)
 
     async def is_user_member_of_group(self, user_id: uuid.UUID, group_id: uuid.UUID) -> bool:
         """Check if a user is a member of a group."""
@@ -224,6 +222,6 @@ class GroupService:
         """Get a user's role in a specific group."""
         role = await self.group_member_repository.get_user_role_in_group(user_id, group_id)
         if role is None:
-            raise UserIDNotFoundError(user_id)
+            raise GroupMemberNotFoundError(user_id, group_id)
 
         return role

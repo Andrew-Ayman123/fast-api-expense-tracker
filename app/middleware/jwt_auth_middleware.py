@@ -7,6 +7,7 @@ from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.dependencies.services_dependencies import get_jwt_service
+from app.exceptions.application_exception import ApplicationError
 from app.services.jwt_service import JWTService
 from app.utils.create_exception_util import create_http_exception
 
@@ -16,9 +17,8 @@ def get_http_bearer() -> HTTPBearer:
     """Return a cached instance of HTTPBearer security scheme."""
     return HTTPBearer(auto_error=True)
 
-
 async def get_current_user_id(
-    credentials: Annotated[HTTPAuthorizationCredentials, Depends(get_http_bearer)],
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(get_http_bearer())],
     jwt_service: Annotated[JWTService, Depends(get_jwt_service)],
 ) -> uuid.UUID:
     """Extract and verify JWT token, return user_id."""
@@ -26,13 +26,15 @@ async def get_current_user_id(
         raise create_http_exception(
             message="Invalid authentication scheme.",
             status_code=403,
-            details={"error": "Authentication scheme must be Bearer."},
+            details={"error": f"{credentials.scheme} Authentication scheme must be Bearer."},
         )
     try:
         return jwt_service.decode_token_user_id(credentials.credentials)
+    except ApplicationError as e:
+        raise e.to_http_exception() from e
     except Exception as e:
         raise create_http_exception(
             message="Invalid or expired token.",
-            status_code=403,
+            status_code=500,
             details={"error": str(e)},
         ) from e

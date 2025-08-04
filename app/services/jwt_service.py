@@ -6,6 +6,13 @@ from datetime import UTC, datetime, timedelta
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
 
+from app.exceptions.jwt_exception import (
+    JWTRefreshTokenInvalidError,
+    JWTTokenExpiredError,
+    JWTTokenInvalidError,
+    JWTTokenMissingUserIDError,
+)
+
 
 class JWTService:
     """Service for handling JWT token generation and decoding."""
@@ -49,18 +56,15 @@ class JWTService:
             # The jose library automatically handles exp claim validation
             return jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
         except ExpiredSignatureError as e:
-            msg = "Token has expired"
-            raise ValueError(msg) from e
+            raise JWTTokenExpiredError from e
         except JWTError as e:
-            msg = "Invalid token"
-            raise ValueError(msg) from e
+            raise JWTTokenInvalidError from e
 
     def decode_token_user_id(self, token: str) -> uuid.UUID:
         """Decode a JWT token and return the user ID."""
         payload = self.decode_token(token)
         if payload.get("user_id") is None:
-            msg = "user_id not found in token"
-            raise ValueError(msg)
+            raise JWTTokenMissingUserIDError
         return uuid.UUID(payload["user_id"])
 
     def generate_refresh_token(self, user_id: uuid.UUID) -> str:
@@ -79,6 +83,5 @@ class JWTService:
         payload = self.decode_token(refresh_token)
         # Optional: verify token type
         if payload.get("type") != "refresh":
-            msg = "Invalid refresh token"
-            raise ValueError(msg)
+            raise JWTRefreshTokenInvalidError
         return uuid.UUID(payload["user_id"])

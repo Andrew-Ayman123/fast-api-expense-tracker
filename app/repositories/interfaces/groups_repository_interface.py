@@ -6,7 +6,7 @@ This module defines the abstract interface for Group repository operations.
 import uuid
 from abc import ABC, abstractmethod
 
-from app.models.group_model import GroupModel
+from app.models import GroupModel
 
 
 class GroupRepositoryInterface(ABC):
@@ -30,7 +30,7 @@ class GroupRepositoryInterface(ABC):
 
     @abstractmethod
     async def update_group(
-        self, group_id: uuid.UUID, name: str | None = None, description: str | None = None,
+        self, group_id: uuid.UUID, name: str, description: str | None = None,
     ) -> GroupModel | None:
         """Update a group by its ID and return the updated group model."""
 
