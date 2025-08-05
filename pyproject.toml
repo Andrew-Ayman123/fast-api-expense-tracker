@@ -80,7 +80,7 @@ select = ["ALL"]
 
 [tool.mypy]
 exclude = [
-    "alembic/versions/.*"
+    "alembic/versions/*"
 ]
 
 [tool.ruff]
