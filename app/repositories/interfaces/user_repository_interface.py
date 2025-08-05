@@ -6,7 +6,7 @@ This module defines the abstract interface for User repository operations.
 import uuid
 from abc import ABC, abstractmethod
 
-from app.models.user_model import UserModel
+from app.models import UserModel
 
 
 class UserRepositoryInterface(ABC):
@@ -23,3 +23,7 @@ class UserRepositoryInterface(ABC):
     @abstractmethod
     async def get_user_by_email(self, email: str) -> UserModel | None:
         """Get user data by email."""
+
+    @abstractmethod
+    async def get_many_users_by_ids(self, user_ids: list[uuid.UUID]) -> list[UserModel]:
+        """Get multiple users by their IDs."""

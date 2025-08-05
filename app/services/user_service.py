@@ -13,8 +13,8 @@ from app.exceptions.user_exception import (
     UserIDNotFoundError,
     WrongEmailOrPasswordError,
 )
-from app.models.user_model import UserModel
-from app.repositories.user_repository_interface import UserRepositoryInterface
+from app.models import UserModel
+from app.repositories.interfaces.user_repository_interface import UserRepositoryInterface
 from app.schemas.user_schema import UserCreateRequest, UserLoginRequest
 from app.utils.password_hash_util import hash_password, verify_password
 

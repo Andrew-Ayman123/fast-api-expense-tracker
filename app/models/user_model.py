@@ -7,7 +7,7 @@ import uuid
 
 from sqlalchemy import DateTime, String
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
 from app.models.shared_base_model import Base
@@ -37,4 +37,11 @@ class UserModel(Base):
         DateTime(timezone=True),
         server_default=func.now(),
         onupdate=func.now(),
+    )
+
+    group_membership = relationship("GroupMemberModel", back_populates="user", passive_deletes=True)
+    expenses_paid = relationship("ExpenseModel", back_populates="payer")
+    created_groups = relationship("GroupModel", back_populates="creator")
+    expense_participants = relationship(
+        "ExpenseParticipantModel", back_populates="user", cascade="all, delete-orphan", passive_deletes=True,
     )
