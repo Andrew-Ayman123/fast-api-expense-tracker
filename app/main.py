@@ -7,7 +7,10 @@ and configures the application with custom settings.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.dependencies import get_env_settings
+from app.dependencies.settings_dependencies import get_env_settings
+from app.interfaces.api.v1.controllers.balance_controller import router as balance_router
+from app.interfaces.api.v1.controllers.expense_controller import router as expense_router
+from app.interfaces.api.v1.controllers.group_controller import router as group_router
 from app.interfaces.api.v1.controllers.health_check_controller import router as health_routes
 from app.interfaces.api.v1.controllers.sync_controller import router as sync_controller
 from app.interfaces.api.v1.controllers.user_controller import router as user_router
@@ -20,7 +23,7 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
- # Add CORS middleware
+# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=get_env_settings().allowed_origins,
@@ -32,3 +35,6 @@ app.add_middleware(
 app.include_router(sync_controller, prefix="/api/v1")
 app.include_router(health_routes, prefix="/api/v1")
 app.include_router(user_router, prefix="/api/v1")
+app.include_router(group_router, prefix="/api/v1")
+app.include_router(expense_router, prefix="/api/v1")
+app.include_router(balance_router, prefix="/api/v1")

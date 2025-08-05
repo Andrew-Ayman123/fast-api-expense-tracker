@@ -563,7 +563,7 @@ Authorization: Bearer <jwt_token>
   "title": "Dinner at Le Bernardin",
   "amount": 285.5,
   "payer_id": "550e8400-e29b-41d4-a716-446655440000",
-  "category": "food",
+  "category": "Food",
   "date": "2025-07-28",
   "is_payer_included": true,
   "participants_id": ["6ba7b810-9dad-11d1-80b4-00c04fd430c8"]
@@ -580,21 +580,25 @@ Authorization: Bearer <jwt_token>
       "group_id": "123e4567-e89b-12d3-a456-426614174000",
       "title": "Dinner at Le Bernardin",
       "amount": 285.5,
-      "payer_id": "550e8400-e29b-41d4-a716-446655440000",
-      "category": "food",
+      "payer": {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "username": "John",
+        "email": "john.doe@example.com"
+      },
+      "category": "Food",
       "date": "2025-07-28",
       "created_at": "2025-07-29T12:30:00Z",
       "updated_at": "2025-07-29T12:30:00Z",
       "participants": [
         {
-          "user_id": "550e8400-e29b-41d4-a716-446655440000",
-          "email": "test@sds.com",
-          "username": "John"
+          "id": "550e8400-e29b-41d4-a716-446655440000",
+          "username": "John",
+          "email": "john.doe@example.com"
         },
         {
-          "user_id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
-          "email": "test@sds.com",
-          "username": "Jane"
+          "id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+          "username": "Jane",
+          "email": "jane.smith@example.com"
         }
       ]
     }
@@ -622,7 +626,7 @@ Authorization: Bearer <jwt_token>
 
 **Query Parameters:**
 
-- `category` (optional): Filter by category (food, transport, accommodation, entertainment, other)
+- `category` (optional): Filter by category (Food, Transport, Accommodation, Entertainment, Other)
 - `payer_id` (optional): Filter by payer UUID
 - `date_from` (optional): Start date filter (YYYY-MM-DD)
 - `date_to` (optional): End date filter (YYYY-MM-DD)
@@ -638,15 +642,28 @@ Authorization: Bearer <jwt_token>
       {
         "id": "987fcdeb-51a2-4d3c-8765-123456789abc",
         "group_id": "123e4567-e89b-12d3-a456-426614174000",
-        "group_name": "Weekend Trip to Paris",
         "title": "Dinner at Le Bernardin",
         "amount": 285.5,
-        "payer_id": "550e8400-e29b-41d4-a716-446655440000",
-        "payer_name": "John Doe",
-        "category": "food",
+        "payer": {
+          "id": "550e8400-e29b-41d4-a716-446655440000",
+          "username": "John",
+          "email": "john.doe@example.com"
+        },
+        "category": "Food",
         "date": "2025-07-28",
         "created_at": "2025-07-29T12:30:00Z",
-        "participant_count": 2
+        "participants": [
+          {
+            "id": "550e8400-e29b-41d4-a716-446655440000",
+            "username": "John",
+            "email": "john.doe@example.com"
+          },
+          {
+            "id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+            "username": "Jane",
+            "email": "jane.smith@example.com"
+          }
+        ]
       }
     ],
     "pagination": {
@@ -690,8 +707,7 @@ Authorization: Bearer <jwt_token>
       "group_name": "Weekend Trip to Paris",
       "title": "Dinner at Le Bernardin",
       "amount": 285.5,
-      "payer_id": "550e8400-e29b-41d4-a716-446655440000",
-      "category": "food",
+      "category": "Food",
       "date": "2025-07-28",
       "created_at": "2025-07-29T12:30:00Z",
       "updated_at": "2025-07-29T12:30:00Z",
@@ -702,12 +718,12 @@ Authorization: Bearer <jwt_token>
       },
       "participants": [
         {
-          "user_id": "550e8400-e29b-41d4-a716-446655440000",
+          "id": "550e8400-e29b-41d4-a716-446655440000",
           "username": "John",
           "email": "john.doe@example.com"
         },
         {
-          "user_id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+          "id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
           "username": "Jane",
           "email": "jane.smith@example.com"
         }
@@ -745,17 +761,12 @@ Authorization: Bearer <jwt_token>
 {
   "title": "Updated Dinner at Le Bernardin",
   "amount": 300.0,
-  "category": "food",
+  "category": "Food",
+  "payer_id": "550e8400-e29b-41d4-a716-446655440000",
   "date": "2025-07-28",
-  "participants": [
-    {
-      "user_id": "550e8400-e29b-41d4-a716-446655440000",
-      "share_amount": 150.0
-    },
-    {
-      "user_id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
-      "share_amount": 150.0
-    }
+  "participants_id": [
+    "550e8400-e29b-41d4-a716-446655440000",
+    "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
   ]
 }
 ```
@@ -770,21 +781,25 @@ Authorization: Bearer <jwt_token>
       "group_id": "123e4567-e89b-12d3-a456-426614174000",
       "title": "Updated Dinner at Le Bernardin",
       "amount": 300.0,
-      "payer_id": "550e8400-e29b-41d4-a716-446655440000",
-      "category": "food",
+      "payer": {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "username": "John",
+        "email": "john.doe@example.com"
+      },
+      "category": "Food",
       "date": "2025-07-28",
       "created_at": "2025-07-29T12:30:00Z",
       "updated_at": "2025-07-29T13:30:00Z",
       "participants": [
         {
-          "user_id": "550e8400-e29b-41d4-a716-446655440000",
+          "id": "550e8400-e29b-41d4-a716-446655440000",
           "username": "John",
-          "email": "test@sds.com"
+          "email": "john.doe@example.com"
         },
         {
-          "user_id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+          "id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
           "username": "Jane",
-          "email": "test@sds.com"
+          "email": "jane.smith@example.com"
         }
       ]
     }
@@ -816,6 +831,12 @@ Authorization: Bearer <jwt_token>
 - `expense_id`: UUID of the expense
 
 **Response (200 OK):**
+
+```json
+{
+  "data": {}
+}
+```
 
 **Error Responses:**
 
@@ -849,7 +870,7 @@ Authorization: Bearer <jwt_token>
     "net_balance": 342.75,
     "expenses": {
       "987fcdeb-51a2-4d3c-8765-123456789abc": 142.75,
-      "888fcdeb-51a2-4d3c-8765-123456789def": 200
+      "888fcdeb-51a2-4d3c-8765-123456789def": 200.0
     }
   }
 }
@@ -878,12 +899,12 @@ Authorization: Bearer <jwt_token>
       "type": "create",
       "entity": "expense",
       "data": {
-        // id and group_idshould be thesame as the server
+        // id and group_id should be the same as the server
         "group_id": "123e4567-e89b-12d3-a456-426614174000",
         "title": "Coffee Shop",
         "amount": 15.5,
         "payer_id": "550e8400-e29b-41d4-a716-446655440000",
-        "category": "food",
+        "category": "Food",
         "date": "2025-07-29",
         "is_payer_included": true,
         "participants_id": ["550e8400-e29b-41d4-a716-446655440000"]
@@ -898,9 +919,8 @@ Authorization: Bearer <jwt_token>
         "title": "Updated Restaurant Bill",
         "amount": 320.0,
         "payer_id": "550e8400-e29b-41d4-a716-446655440000",
-        "category": "food",
+        "category": "Food",
         "date": "2025-07-29",
-        "is_payer_included": true,
         "participants_id": ["550e8400-e29b-41d4-a716-446655440000"]
       },
       "timestamp": "2025-07-29T14:35:00Z"

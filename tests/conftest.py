@@ -10,9 +10,9 @@ from httpx import ASGITransport, AsyncClient, Response
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dependencies import get_database_engine, get_session_maker
+from app.dependencies.database_dependencies import get_database_engine, get_session_maker
 from app.main import app
-from app.models.user_model import UserModel
+from app.models import GroupModel, UserModel
 from app.schemas.user_schema import UserCreateRequest
 
 
@@ -47,6 +47,17 @@ def sample_user_data() -> UserModel:
         password="hashed_password_123",  # noqa: S106
         email="testuser@example.com",
         username="Test User",
+    )
+
+
+@pytest.fixture
+def sample_group_data() -> GroupModel:
+    """Sample group data for testing."""
+    return GroupModel(
+        id=uuid.uuid4(),
+        name="Test Group",
+        description="A test group for expense tracking",
+        created_by=uuid.uuid4(),  # Will be replaced with actual user ID in tests
     )
 
 

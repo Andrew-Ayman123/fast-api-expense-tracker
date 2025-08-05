@@ -10,7 +10,3 @@ class ErrorData(BaseModel):
 
     message: str
     details: dict[str, Any] = {}
-
-    def json_serializable(self) -> str:
-        """Convert the model to a JSON serializable format."""
-        return self.model_dump_json()
