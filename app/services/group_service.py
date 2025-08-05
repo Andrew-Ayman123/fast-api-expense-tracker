@@ -205,7 +205,7 @@ class GroupService:
         updated_member = await self.group_member_repository.update_member_role(
             user_id=member_user_id,
             group_id=group_id,
-            new_role=new_role,
+            role=new_role,
         )
         if not updated_member:
             raise GroupMemberRoleUpdateError(member_user_id, group_id)
