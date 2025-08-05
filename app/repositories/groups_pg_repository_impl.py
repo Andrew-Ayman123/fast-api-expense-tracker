@@ -10,7 +10,7 @@ from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from app.models.group_model import GroupModel
+from app.models import GroupModel
 from app.repositories.interfaces.groups_repository_interface import GroupRepositoryInterface
 from app.utils.logger_util import get_logger
 
@@ -27,7 +27,7 @@ class GroupPGRepository(GroupRepositoryInterface):
         """
         self.session = session
 
-    async def create_group(self, name: str, created_by_id: uuid.UUID, description: str) -> GroupModel | None:
+    async def create_group(self, name: str, created_by_id: uuid.UUID, description: str | None) -> GroupModel | None:
         """Create a new group and return the group model.
 
         Args:
@@ -74,7 +74,7 @@ class GroupPGRepository(GroupRepositoryInterface):
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
-    async def get_all_groups(self, user_id: uuid.UUID , page: int , limit:int) -> list[GroupModel]:  # noqa: D417
+    async def get_all_groups(self, user_id: uuid.UUID, offset: int, limit: int) -> list[GroupModel]:  # noqa: D417
         """Retrieve a list of all groups for a user.
 
         Args:
@@ -87,8 +87,8 @@ class GroupPGRepository(GroupRepositoryInterface):
             NoResultFound: If no groups are found for the user.
 
         """
-        query = select(GroupModel).where(GroupModel.created_by == user_id).offset(page * limit).limit(limit)
-        get_logger().debug("Retrieving groups for user ID: %s, page: %s, limit: %s", user_id, page, limit)
+        query = select(GroupModel).where(GroupModel.created_by == user_id).offset(offset).limit(limit)
+        get_logger().debug("Retrieving groups for user ID: %s, offset: %s, limit: %s", user_id, offset, limit)
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
@@ -128,8 +128,7 @@ class GroupPGRepository(GroupRepositoryInterface):
         result = await self.session.execute(query)
         return result.scalar_one() or 0
 
-
-    async def update_group(self, group_id: uuid.UUID, name: str, description: str) -> GroupModel | None:
+    async def update_group(self, group_id: uuid.UUID, name: str, description: str | None = None) -> GroupModel | None:
         """Update a group's name and description.
 
         Args:

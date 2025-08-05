@@ -45,6 +45,6 @@ class GroupMemberModel(Base):
         nullable=False,
     )
 
-    user = relationship("UserModel", back_populates="group_membership")
-    group = relationship("GroupModel", back_populates="members")
+    user = relationship("UserModel", back_populates="group_membership", passive_deletes=True)
+    group = relationship("GroupModel", back_populates="members", passive_deletes=True)
 

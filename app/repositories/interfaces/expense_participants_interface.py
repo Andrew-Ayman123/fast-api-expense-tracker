@@ -5,28 +5,24 @@ This module defines the abstract interface for Expense participant repository op
 import uuid
 from abc import ABC, abstractmethod
 
-from app.models.expense_participants_model import ExpenseParticipantModel
+from app.models import ExpenseParticipantModel
+from app.models.user_model import UserModel
 
 
 class ExpenseParticipantRepositoryInterface(ABC):
     """Abstract base class for expense participant repository operations."""
 
     @abstractmethod
-    async def add_participant(self, participant: ExpenseParticipantModel) -> ExpenseParticipantModel:
+    async def add_participant(self, user_id: uuid.UUID, expense_id: uuid.UUID) -> ExpenseParticipantModel:
         """Add a new expense participant."""
         ...
 
     @abstractmethod
-    async def remove_participant(self, participant_id: uuid.UUID) -> None:
+    async def remove_participant(self, user_id: uuid.UUID, expense_id: uuid.UUID) -> bool:
         """Remove an expense participant."""
         ...
 
     @abstractmethod
-    async def get_participant(self, participant_id: uuid.UUID) -> ExpenseParticipantModel | None:
-        """Get an expense participant by ID."""
-        ...
-
-    @abstractmethod
-    async def list_participants(self, expense_id: uuid.UUID, page: int, limit: int) -> list[ExpenseParticipantModel]:
+    async def list_participants(self, expense_id: uuid.UUID) -> list[UserModel]:
         """List all participants for a specific expense."""
         ...

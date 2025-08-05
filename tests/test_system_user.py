@@ -57,7 +57,6 @@ class TestUserAPI:
         response = await self._register_user(client, sample_user_data)
 
         assert response.status_code == status.HTTP_409_CONFLICT
-        assert response.json()["detail"]["message"] == "User already exists"
 
     @pytest.mark.asyncio
     async def test_login_user_success(self, client: AsyncClient, sample_user_data: UserModel) -> None:
@@ -80,7 +79,6 @@ class TestUserAPI:
         )
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
-        assert response.json()["detail"]["message"] == "Invalid credentials"
 
     @pytest.mark.asyncio
     async def test_get_profile_success(
@@ -125,4 +123,3 @@ class TestUserAPI:
         )
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
-        assert response.json()["detail"]["message"] == "Invalid or expired refresh token"

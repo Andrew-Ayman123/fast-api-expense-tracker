@@ -28,14 +28,14 @@ class GroupModel(Base):
         nullable=False,
     )
 
-    description: Mapped[str] = mapped_column(
+    description: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
     )
 
     created_by: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("users.id"),
+        ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
 
@@ -51,7 +51,7 @@ class GroupModel(Base):
         onupdate=func.now(),
     )
 
-    members = relationship("GroupMemberModel", back_populates="group")
-    expenses = relationship("ExpenseModel", back_populates="group")
+    members = relationship("GroupMemberModel", back_populates="group", passive_deletes=True)
+    expenses = relationship("ExpenseModel", back_populates="group", passive_deletes=True)
     creator = relationship("UserModel", back_populates="created_groups")
 
