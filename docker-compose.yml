@@ -7,8 +7,26 @@ services:
       POSTGRES_DB: ${DATABASE_NAME}
       POSTGRES_USER: ${DATABASE_USER}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+    ports:
+      - "${DATABASE_PORT}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER} -d ${DATABASE_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - expense-tracker-network
+
+  redis:
+    image: redis:6.2-alpine
+    container_name: redis-expense-tracker
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -22,15 +40,16 @@ services:
     container_name: fastapi-expense-tracker-app
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "${SERVER_PORT}:8000"
     environment:
-      # This to override the DATABASE_URL in the app to link it with the db service
       - DATABASE_URL=postgresql+asyncpg://${DATABASE_USER}:${DATABASE_PASSWORD}@postgres:5432/${DATABASE_NAME}
       - DATABASE_URL_ALEMBIC=postgresql://${DATABASE_USER}:${DATABASE_PASSWORD}@postgres:5432/${DATABASE_NAME}
     env_file:
       - .env
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     volumes:
       - ./app:/app/app
@@ -45,6 +64,58 @@ services:
         uv run run.py
       "
 
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: celery-worker-expense-tracker
+    restart: unless-stopped
+    environment:
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+      - DATABASE_URL=postgresql+asyncpg://${DATABASE_USER}:${DATABASE_PASSWORD}@postgres:5432/${DATABASE_NAME}
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./app:/app/app
+    networks:
+      - expense-tracker-network
+    command: >
+      sh -c "
+        . .venv/bin/activate &&
+        uv run celery -A ${CELERY_MODULE} worker --loglevel=info
+      "
+
+  flower:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: flower-expense-tracker
+    restart: unless-stopped
+    ports:
+      - "5555:5555"
+    environment:
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+    env_file:
+      - .env
+    depends_on:
+      redis:
+        condition: service_healthy
+      celery_worker:
+        condition: service_started
+    networks:
+      - expense-tracker-network
+    command: >
+      sh -c "
+        . .venv/bin/activate &&
+        uv run celery -A ${CELERY_MODULE} flower --port=5555
+      "
 
 volumes:
   postgres_data:

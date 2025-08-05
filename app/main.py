@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.dependencies import get_env_settings
 from app.interfaces.api.v1.controllers.health_check_controller import router as health_routes
+from app.interfaces.api.v1.controllers.sync_controller import router as sync_controller
 from app.interfaces.api.v1.controllers.user_controller import router as user_router
 
 app = FastAPI(
@@ -28,5 +29,6 @@ app.add_middleware(
     allow_headers=get_env_settings().allowed_headers,
 )
 
+app.include_router(sync_controller, prefix="/api/v1")
 app.include_router(health_routes, prefix="/api/v1")
 app.include_router(user_router, prefix="/api/v1")
