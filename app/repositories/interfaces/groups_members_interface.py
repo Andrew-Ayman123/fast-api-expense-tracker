@@ -31,7 +31,7 @@ class GroupMemberRepositoryInterface(ABC):
         self,
         user_id: uuid.UUID,
         group_id: uuid.UUID,
-        role: str,
+        new_role: str,
     ) -> GroupMemberModel | None:
         """Update the role of a member in a group."""
 
