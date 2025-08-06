@@ -431,3 +431,73 @@ class TestGroupAPI:
         assert pagination["limit"] == 10
         assert pagination["total"] == 1
         assert pagination["pages"] == 1
+
+    @pytest.mark.asyncio
+    async def test_group_visibility_for_members(
+        self,
+        client: AsyncClient,
+        auth_token_header: dict,
+    ) -> None:
+        """Test that both group creator and group members can see the group in their lists."""
+        # Create a group with the first user (admin)
+        group_data = GroupModel(
+            id=uuid.uuid4(),
+            name="Shared Test Group",
+            description="A group visible to both creator and members",
+            created_by=uuid.uuid4(),
+        )
+        create_response = await self._create_group(client, auth_token_header, group_data)
+        assert create_response.status_code == status.HTTP_200_OK
+        group_id = create_response.json()["data"]["group"]["id"]
+
+        # Register a second user
+        second_user_data = {
+            "email": "seconduser@example.com",
+            "username": "Second User",
+            "password": "password123",
+        }
+        register_response = await client.post("/users/register", json=second_user_data)
+        assert register_response.status_code == status.HTTP_200_OK
+
+        # Login as second user to get their auth token
+        login_response = await client.post(
+            "/users/login",
+            json={
+                "email": second_user_data["email"],
+                "password": second_user_data["password"],
+            },
+        )
+        assert login_response.status_code == status.HTTP_200_OK
+        second_user_token = login_response.json()["data"]["token"]
+        second_user_headers = {"Authorization": f"Bearer {second_user_token}"}
+
+        # Add second user to the group (using admin token)
+        add_member_response = await client.post(
+            f"/groups/{group_id}/members",
+            headers=auth_token_header,
+            json=GroupMemberAddRequest(
+                email=second_user_data["email"],
+                role="Member",
+            ).model_dump(),
+        )
+        assert add_member_response.status_code == status.HTTP_200_OK
+
+        # Verify first user (admin/creator) can see the group in their list
+        admin_groups_response = await client.get("/groups", headers=auth_token_header)
+        assert admin_groups_response.status_code == status.HTTP_200_OK
+        admin_groups = admin_groups_response.json()["data"]["groups"]
+        assert len(admin_groups) == 1
+        assert admin_groups[0]["id"] == group_id
+        assert admin_groups[0]["name"] == group_data.name
+
+        # Verify second user (member) can see the group in their list
+        member_groups_response = await client.get("/groups", headers=second_user_headers)
+        assert member_groups_response.status_code == status.HTTP_200_OK
+        member_groups = member_groups_response.json()["data"]["groups"]
+        assert len(member_groups) == 1
+        assert member_groups[0]["id"] == group_id
+        assert member_groups[0]["name"] == group_data.name
+
+        # Verify both users see the same group with correct member count
+        assert admin_groups[0]["member_count"] == 2
+        assert member_groups[0]["member_count"] == 2
