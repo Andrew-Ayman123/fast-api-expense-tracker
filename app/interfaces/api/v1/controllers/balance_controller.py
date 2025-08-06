@@ -3,7 +3,7 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends
 
 from app.dependencies.services_dependencies import get_expense_service
 from app.exceptions.application_exception import ApplicationError
@@ -13,22 +13,24 @@ from app.schemas.expense_schema import (
 )
 from app.services.expense_service import ExpenseService
 from app.utils.create_exception_util import create_http_exception
-from app.utils.get_path_id_util import get_id_from_path
 from app.utils.logger_util import get_logger
 
 # versioning is handled in the main file
-router = APIRouter(prefix="/groups/{group_id}/members/{user_id}", tags=["Group Expenses Balance"])
+router = APIRouter(prefix="/groups", tags=["Group Expenses Balance"])
 
-@router.get("/balance")
+
+@router.get("/{group_id}/members/{user_id}/balance")
 async def get_user_balance(
-    request: Request,
+    group_id: uuid.UUID,
+    user_id: uuid.UUID,
     current_user_id: Annotated[uuid.UUID, Depends(get_current_user_id)],
     expense_service: Annotated[ExpenseService, Depends(get_expense_service)],
 ) -> UserBalanceResponse:
     """Get a user's balance in a group.
 
     Args:
-        request (Request): The FastAPI request object.
+        group_id (uuid.UUID): The ID of the group.
+        user_id (uuid.UUID): The ID of the user whose balance is being requested.
         current_user_id (uuid.UUID): The authenticated user's ID from JWT token.
         expense_service (ExpenseService): The expense service instance.
 
@@ -43,10 +45,7 @@ async def get_user_balance(
 
     """
     try:
-        group_id = await get_id_from_path(request, "group_id")
-        target_user_id = await get_id_from_path(request, "user_id")
-
-        balance_data = await expense_service.get_user_balance(group_id, target_user_id, current_user_id)
+        balance_data = await expense_service.get_user_balance(group_id, user_id, current_user_id)
         return UserBalanceResponse(data=balance_data)
     except ApplicationError as e:
         raise e.to_http_exception() from e

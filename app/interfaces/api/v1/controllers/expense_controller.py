@@ -3,7 +3,7 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Query
 
 from app.dependencies.services_dependencies import get_expense_service
 from app.exceptions.application_exception import ApplicationError
@@ -29,7 +29,6 @@ from app.schemas.expense_schema import (
 )
 from app.services.expense_service import ExpenseService
 from app.utils.create_exception_util import create_http_exception
-from app.utils.get_path_id_util import get_id_from_path
 from app.utils.logger_util import get_logger
 
 # versioning is handled in the main file
@@ -38,7 +37,7 @@ router = APIRouter(prefix="/groups/{group_id}/expenses", tags=["expenses"])
 
 @router.post("")
 async def create_expense(
-    request: Request,
+    group_id: uuid.UUID,
     expense_data: ExpenseCreateRequest,
     current_user_id: Annotated[uuid.UUID, Depends(get_current_user_id)],
     expense_service: Annotated[ExpenseService, Depends(get_expense_service)],
@@ -47,7 +46,7 @@ async def create_expense(
     """Create a new expense in a group.
 
     Args:
-        request (Request): The FastAPI request object.
+        group_id (uuid.UUID): The ID of the group where the expense is created.
         expense_data (ExpenseCreateRequest): The data for creating a new expense.
         current_user_id (uuid.UUID): The authenticated user's ID from JWT token.
         expense_service (ExpenseService): The expense service instance.
@@ -62,7 +61,6 @@ async def create_expense(
 
     """
     try:
-        group_id = await get_id_from_path(request, "group_id")
         expense, payer, participants = await expense_service.create_expense(group_id, expense_data, current_user_id)
 
         # Convert expense to schema
@@ -86,7 +84,7 @@ async def create_expense(
 
 @router.get("")
 async def list_expenses(
-    request: Request,
+    group_id: uuid.UUID,
     current_user_id: Annotated[uuid.UUID, Depends(get_current_user_id)],
     expense_service: Annotated[ExpenseService, Depends(get_expense_service)],
     page: Annotated[int, Query(ge=1, description="Page number")] = 1,
@@ -95,7 +93,7 @@ async def list_expenses(
     """List expenses in a group with filtering options.
 
     Args:
-        request (Request): The FastAPI request object.
+        group_id (uuid.UUID): The ID of the group to list expenses for.
         current_user_id (uuid.UUID): The authenticated user's ID from JWT token.
         expense_service (ExpenseService): The expense service instance.
         page (int): Page number for pagination.
@@ -111,7 +109,6 @@ async def list_expenses(
 
     """
     try:
-        group_id = await get_id_from_path(request, "group_id")
         expenses_with_data, total = await expense_service.get_expenses_by_group(group_id, current_user_id, page, limit)
 
         # Convert expenses to schema objects
@@ -142,14 +139,16 @@ async def list_expenses(
 
 @router.get("/{expense_id}")
 async def get_expense(
-    request: Request,
+    group_id: uuid.UUID,  # noqa: ARG001
+    expense_id: uuid.UUID,
     current_user_id: Annotated[uuid.UUID, Depends(get_current_user_id)],
     expense_service: Annotated[ExpenseService, Depends(get_expense_service)],
 ) -> ExpenseDetailResponse:
     """Get detailed information about a specific expense.
 
     Args:
-        request (Request): The FastAPI request object.
+        group_id (uuid.UUID): The ID of the group where the expense belongs.
+        expense_id (uuid.UUID): The ID of the expense to retrieve.
         current_user_id (uuid.UUID): The authenticated user's ID from JWT token.
         expense_service (ExpenseService): The expense service instance.
 
@@ -164,7 +163,6 @@ async def get_expense(
 
     """
     try:
-        expense_id = await get_id_from_path(request, "expense_id")
         expense, participants, payer, group_name = await expense_service.get_expense_by_id(expense_id, current_user_id)
 
         # Convert participants and payer to schema
@@ -195,7 +193,8 @@ async def get_expense(
 
 @router.put("/{expense_id}")
 async def update_expense(
-    request: Request,
+    group_id: uuid.UUID,  # noqa: ARG001
+    expense_id: uuid.UUID,
     expense_data: ExpenseUpdateRequest,
     current_user_id: Annotated[uuid.UUID, Depends(get_current_user_id)],
     expense_service: Annotated[ExpenseService, Depends(get_expense_service)],
@@ -204,7 +203,8 @@ async def update_expense(
     """Update an existing expense.
 
     Args:
-        request (Request): The FastAPI request object.
+        group_id (uuid.UUID): The ID of the group where the expense belongs.
+        expense_id (uuid.UUID): The ID of the expense to update.
         expense_data (ExpenseUpdateRequest): The data for updating the expense.
         current_user_id (uuid.UUID): The authenticated user's ID from JWT token.
         expense_service (ExpenseService): The expense service instance.
@@ -220,7 +220,6 @@ async def update_expense(
 
     """
     try:
-        expense_id = await get_id_from_path(request, "expense_id")
         expense, payer, participants = await expense_service.update_expense(expense_id, expense_data, current_user_id)
 
         # Convert expense to schema
@@ -244,14 +243,16 @@ async def update_expense(
 
 @router.delete("/{expense_id}", status_code=204)
 async def delete_expense(
-    request: Request,
+    group_id: uuid.UUID,  # noqa: ARG001
+    expense_id: uuid.UUID,
     expense_service: Annotated[ExpenseService, Depends(get_expense_service)],
     _: Annotated[None, Depends(verify_user_admin_role)],
 ) -> None:
     """Delete an expense.
 
     Args:
-        request (Request): The FastAPI request object.
+        group_id (uuid.UUID): The ID of the group where the expense belongs.
+        expense_id (uuid.UUID): The ID of the expense to delete.
         current_user_id (uuid.UUID): The authenticated user's ID from JWT token.
         expense_service (ExpenseService): The expense service instance.
 
@@ -263,7 +264,6 @@ async def delete_expense(
 
     """
     try:
-        expense_id = await get_id_from_path(request, "expense_id")
         await expense_service.delete_expense(expense_id)
     except ApplicationError as e:
         raise e.to_http_exception() from e

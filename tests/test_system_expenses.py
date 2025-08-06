@@ -410,6 +410,7 @@ class TestExpenseAPI:
             "category": "Transport",
             "date": "2024-01-02",
             "payer_id": user_id,
+            "is_payer_included": True,
             "participants_id": [
                 user_id,
             ],
@@ -451,6 +452,7 @@ class TestExpenseAPI:
             "category": "Transport",
             "date": "2024-01-02",
             "payer_id": user_id,
+            "is_payer_included": True,
             "participants_id": [
                 user_id,
             ],
