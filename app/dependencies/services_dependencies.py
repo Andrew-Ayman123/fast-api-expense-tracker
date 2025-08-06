@@ -6,7 +6,7 @@ from typing import Annotated
 
 from fastapi import Depends
 
-from app.dependencies.database_dependencies import get_database_session, get_session_maker
+from app.dependencies.database_dependencies import get_database_engine, get_database_session, get_session_maker
 from app.dependencies.repos_dependencies import (
     get_expense_participant_repository,
     get_expense_repository,
@@ -121,7 +121,7 @@ def get_sync_service(
         SyncService: The Sync service instance.
 
     """
-    session_maker= get_session_maker()
+    session_maker= get_session_maker(get_database_engine())
     session = get_database_session(session_maker)
     group_service= get_group_service(
         user_repository=get_user_repository(session),
