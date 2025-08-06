@@ -202,10 +202,17 @@ class GroupService:
         new_role: str,
     ) -> None:
         """Update a member's role if the requesting user is an admin."""
+        # deny demote if the user is the group owner
+        group = await self.group_repository.get_group_by_id(group_id)
+        if not group:
+            raise GroupNotFoundError(group_id)
+        if group.created_by == member_user_id and new_role != GroupMembersRoleEnum.ADMIN:
+            raise GroupMemberRoleUpdateError(member_user_id, group_id, "Owner cannot be demoted")
+
         updated_member = await self.group_member_repository.update_member_role(
             user_id=member_user_id,
             group_id=group_id,
-            new_role=new_role,
+            role=new_role,
         )
         if not updated_member:
             raise GroupMemberRoleUpdateError(member_user_id, group_id)

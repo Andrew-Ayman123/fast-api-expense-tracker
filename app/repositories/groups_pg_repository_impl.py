@@ -6,11 +6,12 @@ using SQLAlchemy ORM for database operations with async session.
 
 import uuid
 
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from app.models import GroupModel
+from app.models.group_members_model import GroupMemberModel
 from app.repositories.interfaces.groups_repository_interface import GroupRepositoryInterface
 from app.utils.logger_util import get_logger
 
@@ -77,6 +78,8 @@ class GroupPGRepository(GroupRepositoryInterface):
     async def get_all_groups(self, user_id: uuid.UUID, offset: int, limit: int) -> list[GroupModel]:  # noqa: D417
         """Retrieve a list of all groups for a user.
 
+        This includes groups created by the user and groups where the user is a member.
+
         Args:
             user_id (uuid.UUID): The ID of the user whose groups to retrieve.
 
@@ -87,7 +90,21 @@ class GroupPGRepository(GroupRepositoryInterface):
             NoResultFound: If no groups are found for the user.
 
         """
-        query = select(GroupModel).where(GroupModel.created_by == user_id).offset(offset).limit(limit)
+        # Query to get groups where user is creator OR a member
+        query = (
+            select(GroupModel)
+            .outerjoin(GroupMemberModel, GroupModel.id == GroupMemberModel.group_id)
+            .where(
+                or_(
+                    GroupModel.created_by == user_id,
+                    GroupMemberModel.user_id == user_id,
+                ),
+            )
+            .distinct()
+            .offset(offset)
+            .limit(limit)
+        )
+
         get_logger().debug("Retrieving groups for user ID: %s, offset: %s, limit: %s", user_id, offset, limit)
         result = await self.session.execute(query)
         return list(result.scalars().all())
@@ -117,6 +134,8 @@ class GroupPGRepository(GroupRepositoryInterface):
     async def count_groups(self, user_id: uuid.UUID) -> int:
         """Count the number of groups for a user.
 
+        This includes groups created by the user and groups where the user is a member.
+
         Args:
             user_id (uuid.UUID): The ID of the user whose groups to count.
 
@@ -124,7 +143,17 @@ class GroupPGRepository(GroupRepositoryInterface):
             int: The number of groups associated with the user.
 
         """
-        query = select(func.count()).select_from(GroupModel).where(GroupModel.created_by == user_id)
+        query = (
+            select(func.count(func.distinct(GroupModel.id)))
+            .select_from(GroupModel)
+            .outerjoin(GroupMemberModel, GroupModel.id == GroupMemberModel.group_id)
+            .where(
+                or_(
+                    GroupModel.created_by == user_id,
+                    GroupMemberModel.user_id == user_id,
+                ),
+            )
+        )
         result = await self.session.execute(query)
         return result.scalar_one() or 0
 

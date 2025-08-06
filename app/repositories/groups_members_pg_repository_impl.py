@@ -125,7 +125,7 @@ class GroupMemberPGRepository(GroupMemberRepositoryInterface):
                 GroupMemberModel.user_id == user_id,
                 GroupMemberModel.group_id == group_id,
             )
-            .values(role=role)
+            .values(role=GroupMembersRoleEnum(role))
             .returning(GroupMemberModel)
             .execution_options(synchronize_session="fetch")
         )

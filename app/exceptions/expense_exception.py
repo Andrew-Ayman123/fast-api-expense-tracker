@@ -115,3 +115,11 @@ class ExpenseParticipantRetrievalError(ApplicationError):
     def __init__(self, message: str = "Failed to retrieve participant details") -> None:
         """Initialize with a custom message."""
         super().__init__(message, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ExpenseParticipantsEmptyError(ApplicationError):
+    """Exception raised when expense participants list is empty."""
+
+    def __init__(self, message: str = "Expense must have at least one participant") -> None:
+        """Initialize with a custom message."""
+        super().__init__(message, status_code=status.HTTP_422_UNPROCESSABLE_ENTITY)

@@ -3,7 +3,7 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Query
 
 from app.dependencies.services_dependencies import get_group_service
 from app.exceptions.application_exception import ApplicationError
@@ -31,7 +31,6 @@ from app.schemas.group_schema import (
 )
 from app.services.group_service import GroupService
 from app.utils.create_exception_util import create_http_exception
-from app.utils.get_path_id_util import get_id_from_path
 from app.utils.logger_util import get_logger
 
 # versioning is handled in the main file
@@ -132,14 +131,14 @@ async def list_groups(
 
 @router.get("/{group_id}")
 async def get_group(
-    request: Request,
+    group_id: uuid.UUID,
     current_user_id: Annotated[uuid.UUID, Depends(get_current_user_id)],
     group_service: Annotated[GroupService, Depends(get_group_service)],
 ) -> GroupDetailResponse:
     """Get detailed information about a specific group.
 
     Args:
-        request (Request): The FastAPI request object.
+        group_id (uuid.UUID): The ID of the group to retrieve.
         current_user_id (uuid.UUID): The authenticated user's ID from JWT token.
         group_service (GroupService): The group service instance.
 
@@ -154,7 +153,6 @@ async def get_group(
 
     """
     try:
-        group_id = await get_id_from_path(request, "group_id")
         group, member_count, user_role = await group_service.get_group_by_id(group_id, current_user_id)
 
         # Convert to schema with user role
@@ -178,7 +176,7 @@ async def get_group(
 
 @router.put("/{group_id}")
 async def update_group(
-    request: Request,
+    group_id: uuid.UUID,
     group_data: GroupUpdateRequest,
     current_user_id: Annotated[uuid.UUID, Depends(get_current_user_id)],
     group_service: Annotated[GroupService, Depends(get_group_service)],
@@ -187,7 +185,7 @@ async def update_group(
     """Update group information.
 
     Args:
-        request (Request): The FastAPI request object.
+        group_id (uuid.UUID): The ID of the group to update.
         group_data (GroupUpdateRequest): The data for updating the group.
         current_user_id (uuid.UUID): The authenticated user's ID from JWT token.
         group_service (GroupService): The group service instance.
@@ -204,7 +202,6 @@ async def update_group(
 
     """
     try:
-        group_id = await get_id_from_path(request, "group_id")
         group, member_count, user_role = await group_service.update_group(group_id, group_data, current_user_id)
 
         group_dict = group.__dict__.copy()
@@ -228,7 +225,7 @@ async def update_group(
 
 @router.get("/{group_id}/members")
 async def list_group_members(
-    request: Request,
+    group_id: uuid.UUID,
     current_user_id: Annotated[uuid.UUID, Depends(get_current_user_id)],
     group_service: Annotated[GroupService, Depends(get_group_service)],
     page: Annotated[int, Query(ge=1, description="Page number")] = 1,
@@ -237,7 +234,7 @@ async def list_group_members(
     """Get paginated list of group members.
 
     Args:
-        request (Request): The FastAPI request object.
+        group_id (uuid.UUID): The ID of the group to retrieve members from.
         current_user_id (uuid.UUID): The authenticated user's ID from JWT token.
         group_service (GroupService): The group service instance.
         page (int): Page number for pagination.
@@ -254,7 +251,6 @@ async def list_group_members(
 
     """
     try:
-        group_id = await get_id_from_path(request, "group_id")
         members_user_roles, members_roles, total = await group_service.get_group_members(
             group_id,
             current_user_id,
@@ -288,7 +284,7 @@ async def list_group_members(
 
 @router.post("/{group_id}/members")
 async def add_group_member(
-    request: Request,
+    group_id: uuid.UUID,
     member_data: GroupMemberAddRequest,
     group_service: Annotated[GroupService, Depends(get_group_service)],
     _: Annotated[None, Depends(verify_user_admin_role)],
@@ -296,7 +292,7 @@ async def add_group_member(
     """Add a new member to the group.
 
     Args:
-        request (Request): The FastAPI request object.
+        group_id (uuid.UUID): The ID of the group to add a member to.
         member_data (GroupMemberAddRequest): The data for adding a new member.
         current_user_id (uuid.UUID): The authenticated user's ID from JWT token.
         group_service (GroupService): The group service instance.
@@ -313,7 +309,6 @@ async def add_group_member(
 
     """
     try:
-        group_id = await get_id_from_path(request, "group_id")
         member, role = await group_service.add_member(group_id, member_data)
         member_dict = member.__dict__.copy()
         member_dict["role"] = role
@@ -334,7 +329,8 @@ async def add_group_member(
 
 @router.put("/{group_id}/members/{user_id}/role")
 async def update_member_role(
-    request: Request,
+    group_id: uuid.UUID,
+    user_id: uuid.UUID,
     role_data: GroupMemberRoleUpdateRequest,
     group_service: Annotated[GroupService, Depends(get_group_service)],
     _: Annotated[None, Depends(verify_user_admin_role)],
@@ -342,7 +338,8 @@ async def update_member_role(
     """Update a member's role in a group.
 
     Args:
-        request (Request): The FastAPI request object.
+        group_id (uuid.UUID): The ID of the group.
+        user_id (uuid.UUID): The ID of the user whose role is being updated.
         role_data (GroupMemberRoleUpdateRequest): The new role data.
         current_user_id (uuid.UUID): The authenticated user's ID from JWT token.
         group_service (GroupService): The group service instance.
@@ -359,10 +356,7 @@ async def update_member_role(
 
     """
     try:
-        group_id = await get_id_from_path(request, "group_id")
-        member_user_id = await get_id_from_path(request, "user_id")
-
-        await group_service.update_member_role(group_id, member_user_id, role_data.role)
+        await group_service.update_member_role(group_id, user_id, role_data.role)
     except ApplicationError as e:
         raise e.to_http_exception() from e
     except Exception as e:
@@ -378,7 +372,8 @@ async def update_member_role(
 
 @router.delete("/{group_id}/members/{user_id}",status_code=204)
 async def remove_group_member(
-    request: Request,
+    group_id: uuid.UUID,
+    user_id: uuid.UUID,
     current_user_id: Annotated[uuid.UUID, Depends(get_current_user_id)],
     group_service: Annotated[GroupService, Depends(get_group_service)],
     _: Annotated[None, Depends(verify_user_admin_role)],
@@ -386,7 +381,8 @@ async def remove_group_member(
     """Remove a member from a group.
 
     Args:
-        request (Request): The FastAPI request object.
+        group_id (uuid.UUID): The ID of the group.
+        user_id (uuid.UUID): The ID of the user to remove.
         current_user_id (uuid.UUID): The authenticated user's ID from JWT token.
         group_service (GroupService): The group service instance.
         _ : User admin role verification dependency.
@@ -400,10 +396,7 @@ async def remove_group_member(
 
     """
     try:
-        group_id = await get_id_from_path(request, "group_id")
-        member_user_id = await get_id_from_path(request, "user_id")
-
-        await group_service.remove_member(group_id, member_user_id, current_user_id)
+        await group_service.remove_member(group_id, user_id, current_user_id)
     except ApplicationError as e:
         raise e.to_http_exception() from e
     except Exception as e:
@@ -417,7 +410,7 @@ async def remove_group_member(
 
 @router.delete("/{group_id}",status_code=204)
 async def delete_group(
-    request: Request,
+    group_id: uuid.UUID,
     current_user_id: Annotated[uuid.UUID, Depends(get_current_user_id)],
     group_service: Annotated[GroupService, Depends(get_group_service)],
     _: Annotated[None, Depends(verify_user_admin_role)],
@@ -425,7 +418,7 @@ async def delete_group(
     """Delete a group (only allowed by admin).
 
     Args:
-        request (Request): The FastAPI request object.
+        group_id (uuid.UUID): The ID of the group to delete.
         current_user_id (uuid.UUID): The authenticated user's ID from JWT token.
         group_service (GroupService): The group service instance.
         _ : User admin role verification dependency.
@@ -438,7 +431,6 @@ async def delete_group(
 
     """
     try:
-        group_id = await get_id_from_path(request, "group_id")
         await group_service.delete_group(group_id, current_user_id)
     except ApplicationError as e:
         raise e.to_http_exception() from e
