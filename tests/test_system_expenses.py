@@ -165,6 +165,67 @@ class TestExpenseAPI:
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
     @pytest.mark.asyncio
+    async def test_create_expense_empty_participants_error(
+        self,
+        client: AsyncClient,
+        auth_token_header: dict,
+    ) -> None:
+        """Test expense creation with empty participants list should return error."""
+        group_id = await self._create_group(client, auth_token_header)
+        user_response = await client.get("/users/me", headers=auth_token_header)
+        user_id = user_response.json()["data"]["user"]["id"]
+
+        expense_data = {
+            "title": "Expense with No Participants",
+            "amount": 100.0,
+            "payer_id": user_id,
+            "category": "Food",
+            "date": "2024-01-01",
+            "is_payer_included": False,  # Payer not included and no participants
+            "participants_id": [],  # Empty participants list
+        }
+
+        response = await self._create_expense(client, auth_token_header, group_id, expense_data)
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, response.json()
+
+    @pytest.mark.asyncio
+    async def test_create_expense_empty_participants_with_payer_included(
+        self,
+        client: AsyncClient,
+        auth_token_header: dict,
+    ) -> None:
+        """Test expense creation with empty participants list but payer is included."""
+        group_id = await self._create_group(client, auth_token_header)
+        user_response = await client.get("/users/me", headers=auth_token_header)
+        user_id = user_response.json()["data"]["user"]["id"]
+
+        expense_data = {
+            "title": "Expense with Payer Only",
+            "amount": 150.0,
+            "payer_id": user_id,
+            "category": "Transport",
+            "date": "2024-01-01",
+            "is_payer_included": True,  # Payer is included even though participants list is empty
+            "participants_id": [],  # Empty participants list
+        }
+
+        response = await self._create_expense(client, auth_token_header, group_id, expense_data)
+
+        assert response.status_code == status.HTTP_200_OK, response.json()
+        json_data = response.json()
+        assert "data" in json_data
+        assert "expense" in json_data["data"]
+        expense = json_data["data"]["expense"]
+        assert expense["title"] == expense_data["title"]
+        assert expense["amount"] == expense_data["amount"]
+        assert expense["category"] == expense_data["category"]
+        assert "id" in expense
+        assert "created_at" in expense
+        assert "updated_at" in expense
+        # Should have the payer as a participant even though participants_id was empty
+        assert len(expense["participants"]) == 1
+
+    @pytest.mark.asyncio
     async def test_list_expenses_success(
         self,
         client: AsyncClient,
@@ -391,7 +452,7 @@ class TestExpenseAPI:
             "date": "2024-01-02",
             "payer_id": user_id,
             "participants_id": [
-               user_id,
+                user_id,
             ],
         }
 
