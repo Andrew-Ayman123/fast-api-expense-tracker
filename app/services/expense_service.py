@@ -15,6 +15,7 @@ from app.exceptions.expense_exception import (
     ExpenseNotFoundError,
     ExpenseParticipantNotInGroupError,
     ExpenseParticipantRetrievalError,
+    ExpenseParticipantsEmptyError,
     ExpensePayerNotInGroupError,
     ExpenseUpdateError,
 )
@@ -47,7 +48,135 @@ class ExpenseService:
         self.group_service = group_service
         self.user_repository = user_repository
 
-    async def create_expense(  # noqa: C901
+    async def _validate_user_group_access(
+        self,
+        user_id: uuid.UUID,
+        group_id: uuid.UUID,
+        action: str,
+    ) -> None:
+        """Validate that a user has access to a group for a specific action."""
+        if not await self.group_service.is_user_member_of_group(user_id, group_id):
+            raise ExpenseAccessDeniedError(user_id, group_id, action)
+
+    async def _validate_payer_in_group(self, payer_id: uuid.UUID, group_id: uuid.UUID) -> None:
+        """Validate that the payer is a member of the group."""
+        if not await self.group_service.is_user_member_of_group(payer_id, group_id):
+            raise ExpensePayerNotInGroupError(payer_id, group_id)
+
+    async def _validate_participants_in_group(
+        self,
+        participant_ids: list[uuid.UUID],
+        group_id: uuid.UUID,
+    ) -> None:
+        """Validate that all participants are members of the group."""
+        for participant_id in participant_ids:
+            if not await self.group_service.is_user_member_of_group(participant_id, group_id):
+                raise ExpenseParticipantNotInGroupError(participant_id, group_id)
+
+    def _manage_participant_list(
+        self,
+        participants_id: list[uuid.UUID],
+        payer_id: uuid.UUID,
+        *,
+        is_payer_included: bool,
+    ) -> list[uuid.UUID]:
+        """Manage the participant list based on payer inclusion preference."""
+        participants = participants_id.copy()
+
+        if is_payer_included:
+            if payer_id not in participants:
+                participants.append(payer_id)
+        else:
+            if payer_id in participants:
+                participants.remove(payer_id)
+            if not participants:
+                raise ExpenseParticipantsEmptyError
+
+        return participants
+
+    async def _get_payer_and_participants_models(
+        self,
+        payer_id: uuid.UUID,
+        participant_ids: list[uuid.UUID],
+        group_id: uuid.UUID,
+    ) -> tuple[UserModel, list[UserModel]]:
+        """Get payer and participant user models."""
+        # Get payer user model
+        payer_user_model = await self.user_repository.get_user_by_id(payer_id)
+        if not payer_user_model:
+            raise ExpensePayerNotInGroupError(payer_id, group_id)
+
+        # Get participant user models
+        participant_users = await self.user_repository.get_many_users_by_ids(participant_ids)
+        if not participant_users:
+            raise ExpenseParticipantRetrievalError
+
+        return payer_user_model, participant_users
+
+    async def _get_expense_or_raise(self, expense_id: uuid.UUID) -> ExpenseModel:
+        """Get an expense by ID or raise ExpenseNotFoundError if not found."""
+        expense = await self.expense_repository.get_expense_by_id(expense_id)
+        if not expense:
+            raise ExpenseNotFoundError(expense_id)
+        return expense
+
+    async def _add_participants_to_expense(
+        self,
+        participant_ids: list[uuid.UUID],
+        expense_id: uuid.UUID,
+    ) -> None:
+        """Add participants to an expense."""
+        for participant_id in participant_ids:
+            await self.expense_participant_repository.add_participant(
+                user_id=participant_id,
+                expense_id=expense_id,
+            )
+
+    async def _remove_all_participants_from_expense(self, expense_id: uuid.UUID) -> None:
+        """Remove all participants from an expense."""
+        old_participants = await self.expense_participant_repository.list_participants(expense_id)
+        for participant in old_participants:
+            await self.expense_participant_repository.remove_participant(
+                user_id=participant.id,
+                expense_id=expense_id,
+            )
+
+    def _calculate_user_expense_balance(
+        self,
+        expense: ExpenseModel,
+        target_user_id: uuid.UUID,
+        participants: list[UserModel],
+        participant_count: int,
+    ) -> float:
+        """Calculate a user's balance for a specific expense."""
+        # Calculate per-person share
+        per_person_share = expense.amount / participant_count
+
+        # Check if user is the payer
+        is_payer = expense.payer_id == target_user_id
+
+        # Check if user is a participant
+        is_participant = any(participant.id == target_user_id for participant in participants)
+
+        if is_payer and is_participant:
+            # User paid for the expense and is also a participant
+            # They should receive (total - their share) from others
+            return expense.amount - per_person_share
+
+        if is_payer and not is_participant:
+            # User paid but is not a participant
+            # They should receive the full amount back
+            return expense.amount
+
+        if not is_payer and is_participant:
+            # User is a participant but didn't pay
+            # They owe their share (negative balance)
+            return -per_person_share
+
+        # User is neither payer nor participant (shouldn't happen given our query)
+        return 0.0
+
+    async def create_expense(
         self,
         group_id: uuid.UUID,
         expense_data: ExpenseCreateRequest,
@@ -55,21 +184,20 @@ class ExpenseService:
     ) -> tuple[ExpenseModel, UserModel, list[UserModel]]:
         """Create a new expense if the user is a member of the group."""
         # Check if current user is member of the group
-        if not await self.group_service.is_user_member_of_group(current_user_id, group_id):
-            raise ExpenseAccessDeniedError(current_user_id, group_id, "create expenses in")
+        await self._validate_user_group_access(current_user_id, group_id, "create expenses in")
 
         # Validate that payer is a member of the group
-        if not await self.group_service.is_user_member_of_group(expense_data.payer_id, group_id):
-            raise ExpensePayerNotInGroupError(expense_data.payer_id, group_id)
+        await self._validate_payer_in_group(expense_data.payer_id, group_id)
+
+        # Manage participant list based on payer inclusion preference
+        participants = self._manage_participant_list(
+            expense_data.participants_id,
+            expense_data.payer_id,
+            is_payer_included=expense_data.is_payer_included,
+        )
 
         # Validate that all participants are members of the group
-        participants = expense_data.participants_id.copy()
-        if expense_data.is_payer_included and expense_data.payer_id not in participants:
-            participants.append(expense_data.payer_id)
-
-        for participant_id in participants:
-            if not await self.group_service.is_user_member_of_group(participant_id, group_id):
-                raise ExpenseParticipantNotInGroupError(participant_id, group_id)
+        await self._validate_participants_in_group(participants, group_id)
 
         try:
             expense = await self.expense_repository.create_expense(
@@ -84,22 +212,14 @@ class ExpenseService:
             if not expense:
                 raise ExpenseCreationError
 
-            # Create expense participants
-            for participant_id in participants:
-                # Calculate equal share for now (can be enhanced later for custom shares)
-                await self.expense_participant_repository.add_participant(
-                    user_id=participant_id,
-                    expense_id=expense.id,
-                )
+            # Add participants to the expense
+            await self._add_participants_to_expense(participants, expense.id)
 
-            # Get participant user models
-            participant_users = await self.user_repository.get_many_users_by_ids(participants)
-            if not participant_users:
-                raise ExpenseParticipantRetrievalError
+            # Get participant and payer user models
+            payer_user_model, participant_users = await self._get_payer_and_participants_models(
+                expense_data.payer_id, participants, group_id,
+            )
 
-            payer_user_model = await self.user_repository.get_user_by_id(expense_data.payer_id)
-            if not payer_user_model:
-                raise ExpensePayerNotInGroupError(expense_data.payer_id, group_id)
         except IntegrityError as e:
             msg = f"Failed to create expense: {e!s}"
             raise ExpenseCreationError(msg) from e
@@ -114,8 +234,7 @@ class ExpenseService:
         limit: int = 20,
     ) -> tuple[list[tuple[ExpenseModel, UserModel, list[UserModel]]], int]:
         """Get all expenses in a group if the user is a member."""
-        if not await self.group_service.is_user_member_of_group(user_id, group_id):
-            raise ExpenseAccessDeniedError(user_id, group_id, "access expenses in")
+        await self._validate_user_group_access(user_id, group_id, "access expenses in")
 
         offset = (page - 1) * limit
         expenses = await self.expense_repository.get_expenses_by_group(group_id, offset, limit)
@@ -141,13 +260,10 @@ class ExpenseService:
         user_id: uuid.UUID,
     ) -> tuple[ExpenseModel, list[UserModel], UserModel, str]:
         """Get an expense by ID if the user is a member of the expense's group."""
-        expense = await self.expense_repository.get_expense_by_id(expense_id)
-        if not expense:
-            raise ExpenseNotFoundError(expense_id)
+        expense = await self._get_expense_or_raise(expense_id)
 
         # Check if user is member of the expense's group
-        if not await self.group_service.is_user_member_of_group(user_id, expense.group_id):
-            raise ExpenseAccessDeniedError(user_id, expense_id, "access")
+        await self._validate_user_group_access(user_id, expense.group_id, "access")
 
         # Get expense participants user models
         participants = await self.expense_participant_repository.list_participants(
@@ -172,19 +288,15 @@ class ExpenseService:
         user_id: uuid.UUID,
     ) -> tuple[ExpenseModel, UserModel, list[UserModel]]:
         """Update an expense if the user is a member of the group."""
-        expense = await self.expense_repository.get_expense_by_id(expense_id)
-        if not expense:
-            raise ExpenseNotFoundError(expense_id)
+        expense = await self._get_expense_or_raise(expense_id)
 
         # Check if user is member of the expense's group
-        if not await self.group_service.is_user_member_of_group(user_id, expense.group_id):
-            raise ExpenseAccessDeniedError(user_id, expense_id, "update")
+        await self._validate_user_group_access(user_id, expense.group_id, "update")
 
         # Validate that all participants are members of the group
-        for user_participant_id in expense_data.participants_id:
-            if not await self.group_service.is_user_member_of_group(user_participant_id, expense.group_id):
-                raise ExpenseParticipantNotInGroupError(user_participant_id, expense.group_id)
+        await self._validate_participants_in_group(expense_data.participants_id, expense.group_id)
 
+        # Update the expense details
         updated_expense = await self.expense_repository.update_expense(
             expense_id=expense_id,
             title=expense_data.title,
@@ -196,31 +308,22 @@ class ExpenseService:
         if not updated_expense:
             raise ExpenseUpdateError(expense_id)
 
-        # Update participants - for now, we'll remove old participants and add new ones
-        # This could be optimized to only update changed participants
-        old_participants = await self.expense_participant_repository.list_participants(expense_id)
-        for participant in old_participants:
-            await self.expense_participant_repository.remove_participant(
-                user_id=participant.id,
-                expense_id=expense_id,
-            )
+        # Manage participant list based on payer inclusion preference
+        final_participants = self._manage_participant_list(
+            expense_data.participants_id,
+            expense_data.payer_id,
+            is_payer_included=expense_data.is_payer_included,
+        )
 
-        # Add new participants with their share amounts
-        for user_participant_id in expense_data.participants_id:
-            await self.expense_participant_repository.add_participant(
-                user_id=user_participant_id,
-                expense_id=updated_expense.id,
-            )
+        # Update participants by removing old ones and adding new ones
+        await self._remove_all_participants_from_expense(expense_id)
+        await self._add_participants_to_expense(final_participants, updated_expense.id)
 
-        # Get updated participant user models
-        participant_users = await self.user_repository.get_many_users_by_ids(expense_data.participants_id)
-        if not participant_users:
-            raise ExpenseParticipantRetrievalError
+        # Get updated participant and payer user models
+        payer_user_model, participant_users = await self._get_payer_and_participants_models(
+            expense_data.payer_id, final_participants, expense.group_id,
+        )
 
-        # Get payer user model
-        payer_user_model = await self.user_repository.get_user_by_id(expense_data.payer_id)
-        if not payer_user_model:
-            raise ExpensePayerNotInGroupError(expense_data.payer_id, expense.group_id)
         return (updated_expense, payer_user_model, participant_users)
 
     async def delete_expense(self, expense_id: uuid.UUID) -> None:
@@ -260,30 +363,10 @@ class ExpenseService:
                 expense_balances[expense.id] = 0.0
                 continue
 
-            # Calculate per-person share
-            per_person_share = expense.amount / participant_count
-
-            # Check if user is the payer
-            is_payer = expense.payer_id == target_user_id
-
-            # Check if user is a participant
-            is_participant = any(participant.id == target_user_id for participant in participants)
-
-            if is_payer and is_participant:
-                # User paid for the expense and is also a participant
-                # They should receive (total - their share) from others
-                expense_balance = expense.amount - per_person_share
-            elif is_payer and not is_participant:
-                # User paid but is not a participant
-                # They should receive the full amount back
-                expense_balance = expense.amount
-            elif not is_payer and is_participant:
-                # User is a participant but didn't pay
-                # They owe their share (negative balance)
-                expense_balance = -per_person_share
-            else:
-                # User is neither payer nor participant (shouldn't happen given our query)
-                expense_balance = 0.0
+            # Calculate expense balance for this user
+            expense_balance = self._calculate_user_expense_balance(
+                expense, target_user_id, participants, participant_count,
+            )
 
             expense_balances[expense.id] = expense_balance
             net_balance += expense_balance

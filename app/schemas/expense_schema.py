@@ -150,9 +150,10 @@ class ExpenseUpdateRequest(BaseModel):
 
     title: str = Field(..., max_length=255)
     amount: float = Field(..., gt=0)
-    category: str = Field(..., pattern="^(Food|Transport|Accommodation|Entertainment|Other)$")
     payer_id: UUID
+    category: str = Field(..., pattern="^(Food|Transport|Accommodation|Entertainment|Other)$")
     date: date
+    is_payer_included: bool
     participants_id: list[UUID]
 
 
