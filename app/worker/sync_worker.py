@@ -1,9 +1,15 @@
-"""Celery worker for the expense tracker application."""
+"""Celery worker for handling bulk synchronization tasks."""
+
+import asyncio
 
 from app.config.celery_config import celery_app
+from app.dependencies.services_dependencies import get_sync_service
 
 
-@celery_app.task(name="app.workers.sync_worker.test_add")
-def test_add(a: int, b: int):  # noqa: ANN201
-    """Test task to add two numbers."""
-    return a + b
+@celery_app.task(name="app.workers.sync_worker.bulk_sync")
+def bulk_sync(request : dict ) -> dict:
+    """Celery task to handle bulk synchronization of data changes."""  # noqa: D202
+
+    sync_service = get_sync_service()
+
+    return asyncio.run(sync_service.handle_bulk_sync(request))
