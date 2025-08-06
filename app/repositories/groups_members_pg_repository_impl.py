@@ -27,7 +27,10 @@ class GroupMemberPGRepository(GroupMemberRepositoryInterface):
         self.db = db_session
 
     async def add_member(
-        self, user_id: uuid.UUID, group_id: uuid.UUID, role: GroupMembersRoleEnum,
+        self,
+        user_id: uuid.UUID,
+        group_id: uuid.UUID,
+        role: GroupMembersRoleEnum,
     ) -> GroupMemberModel | None:
         """Add a user as a member to a group.
 
@@ -56,11 +59,13 @@ class GroupMemberPGRepository(GroupMemberRepositoryInterface):
 
         return new_member
 
-    async def get_members_by_group_id(self, group_id: uuid.UUID, page: int, limit: int) -> list[GroupMemberModel]:  # noqa: D417
+    async def get_members_by_group_id(self, group_id: uuid.UUID, offset: int, limit: int) -> list[GroupMemberModel]:
         """Retrieve all members in a group.
 
         Args:
             group_id (uuid.UUID): The ID of the group for which to retrieve members.
+            offset (int): The offset for pagination.
+            limit (int): The maximum number of members to retrieve per page.
 
         Returns:
             list[GroupMemberModel]: A list of GroupMemberModel instances representing the members of the group.
@@ -70,7 +75,7 @@ class GroupMemberPGRepository(GroupMemberRepositoryInterface):
 
         """
         result = await self.db.execute(
-            select(GroupMemberModel).where(GroupMemberModel.group_id == group_id).offset(page * limit).limit(limit),
+            select(GroupMemberModel).where(GroupMemberModel.group_id == group_id).offset(offset).limit(limit),
         )
         return list(result.scalars().all())
 

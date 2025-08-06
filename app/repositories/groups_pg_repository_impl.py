@@ -75,13 +75,15 @@ class GroupPGRepository(GroupRepositoryInterface):
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
-    async def get_all_groups(self, user_id: uuid.UUID, offset: int, limit: int) -> list[GroupModel]:  # noqa: D417
+    async def get_all_groups(self, user_id: uuid.UUID, offset: int, limit: int) -> list[GroupModel]:
         """Retrieve a list of all groups for a user.
 
         This includes groups created by the user and groups where the user is a member.
 
         Args:
             user_id (uuid.UUID): The ID of the user whose groups to retrieve.
+            offset (int): The offset for pagination.
+            limit (int): The maximum number of groups to retrieve.
 
         Returns:
             list[GroupModel]: A list of GroupModel instances associated with the user.

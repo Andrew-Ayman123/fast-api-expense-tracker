@@ -899,6 +899,7 @@ Authorization: Bearer <jwt_token>
     {
       "type": "create",
       "entity": "expense",
+      "entity_id": "987fcdeb-51a2-4d3c-8765-123456789abc",
       "data": {
         // id and group_id should be the same as the server
         "group_id": "123e4567-e89b-12d3-a456-426614174000",
@@ -917,6 +918,7 @@ Authorization: Bearer <jwt_token>
       "entity": "expense",
       "entity_id": "987fcdeb-51a2-4d3c-8765-123456789abc",
       "data": {
+        "group_id": "123e4567-e89b-12d3-a456-426614174000",
         "title": "Updated Restaurant Bill",
         "amount": 320.0,
         "payer_id": "550e8400-e29b-41d4-a716-446655440000",
@@ -926,6 +928,38 @@ Authorization: Bearer <jwt_token>
         "participants_id": ["550e8400-e29b-41d4-a716-446655440000"]
       },
       "timestamp": "2025-07-29T14:35:00Z"
+    },
+    {
+      "type": "delete",
+      "entity": "expense",
+      "entity_id": "456fcdeb-51a2-4d3c-8765-123456789xyz",
+      "timestamp": "2025-07-29T14:40:00Z"
+    },
+    {
+      "type": "create",
+      "entity": "group",
+      "entity_id": "789e4567-e89b-12d3-a456-426614174111",
+      "data": {
+        "name": "College Reunion Trip",
+        "description": "Expenses for our college reunion weekend"
+      },
+      "timestamp": "2025-07-29T14:45:00Z"
+    },
+    {
+      "type": "update",
+      "entity": "group",
+      "entity_id": "123e4567-e89b-12d3-a456-426614174000",
+      "data": {
+        "name": "Updated Paris Trip",
+        "description": "Updated description for our amazing Paris adventure"
+      },
+      "timestamp": "2025-07-29T14:50:00Z"
+    },
+    {
+      "type": "delete",
+      "entity": "group",
+      "entity_id": "abc4567-e89b-12d3-a456-426614174222",
+      "timestamp": "2025-07-29T14:55:00Z"
     }
   ]
 }

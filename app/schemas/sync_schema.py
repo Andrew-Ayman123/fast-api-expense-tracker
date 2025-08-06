@@ -55,7 +55,6 @@ class SyncBulkResponse(BaseModel):
     """Schema for bulk sync response."""
 
     operation_id: str
-    notifications: list[str]
 
 
 class SyncStatusResponse(BaseModel):

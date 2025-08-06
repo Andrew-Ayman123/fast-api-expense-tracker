@@ -1,5 +1,6 @@
 .venv/
 .env
+production.env
 
 .coverage       
 htmlcov/

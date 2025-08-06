@@ -12,5 +12,6 @@ class ExpenseCategoryEnum(enum.Enum):
     HEALTHCARE = "Healthcare"
     OTHER = "Other"
 
-    def __str__(self):  # noqa: ANN204, D105
+    def __str__(self) -> str:
+        """Return the string representation of the enum value."""
         return self.value

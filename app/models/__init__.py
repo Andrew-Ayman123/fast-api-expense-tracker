@@ -8,9 +8,11 @@ from .expense_participants_model import ExpenseParticipantModel
 from .group_members_model import GroupMemberModel
 from .group_members_role_enum import GroupMembersRoleEnum
 from .group_model import GroupModel
+from .shared_base_model import Base  # shared DeclarativeBase
 from .user_model import UserModel
 
 __all__ = [
+    "Base",
     "ExpenseCategoryEnum",
     "ExpenseModel",
     "ExpenseParticipantModel",

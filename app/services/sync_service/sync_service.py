@@ -1,8 +1,9 @@
 """Sync service for the expense tracker application."""
 
-from datetime import UTC, datetime
+import asyncio
+from uuid import UUID
 
-from app.schemas.sync_schema import SyncBulkResponse
+from app.schemas.sync_schema import SyncBulkRequest
 from app.services.expense_service import ExpenseService
 from app.services.group_service import GroupService
 
@@ -19,31 +20,25 @@ class SyncService:
         self.expense_service = expense_service
         self.group_service = group_service
 
-    async def handle_bulk_sync(self, request: dict) -> dict:  # noqa: C901
+    async def handle_bulk_sync(
+        self,
+        request: SyncBulkRequest,
+        current_user_id: UUID,  # noqa: ARG002
+    ) -> dict:
         """Handle bulk synchronization of data changes."""
-        operation_id = str(datetime.now(UTC).timestamp())
-        nlist = []
+        # simulate delay to see pending, please remove ya MAGDYYYYYYY
+        await asyncio.sleep(30)
+        notification_list = []
 
-        for change in request.get("changes", []):
-            if change.get("type") == "create":
-                if change.get("entity") == "expense":
-                    nlist.append("expense created")
-                elif change.get("entity") == "group":
-                    nlist.append("group created")
-            elif change.get("type") == "update":
-                if change.get("entity") == "expense":
-                    nlist.append("expense updated")
-                elif change.get("entity") == "group":
-                    nlist.append("group updated")
+        for change in request.changes:
+            change_type = change.type
+            entity = change.entity
 
-            elif change.get("type") == "delete":
-                if change.get("entity") == "expense":
-                    nlist.append("expense deleted")
+            if change_type == "create":
+                notification_list.append(f"{entity} created")
+            elif change_type == "update":
+                notification_list.append(f"{entity} updated")
+            elif change_type == "delete":
+                notification_list.append(f"{entity} deleted")
 
-                elif change.get("entity") == "group":
-                    nlist.append("group deleted")
-
-        return SyncBulkResponse(
-            operation_id=operation_id,
-            notifications=nlist,
-        ).dict()
+        return {"notifications": notification_list}

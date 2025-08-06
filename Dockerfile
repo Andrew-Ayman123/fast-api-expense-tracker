@@ -1,28 +1,31 @@
 FROM python:3.12-slim
 
-# Install system dependencies
+# Install system dependencies in a single layer
 RUN apt-get update && apt-get install -y \
     gcc \
     libpq-dev \
     curl \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install uv for faster package management
-RUN pip install uv
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install uv
 
 WORKDIR /app
 
-# Copy pyproject.toml first for better layer caching
-COPY pyproject.toml ./
-
+# Create virtual environment
 RUN uv venv .venv
-RUN . .venv/bin/activate
 
-# Copy application code first, because "app" config inside the pyproject.toml file
+# Copy dependency files first for better caching
+COPY pyproject.toml uv.lock* ./
+
+# Create the app directory structure that your pyproject.toml expects
+RUN mkdir -p app
+
+# Install dependencies (this layer will be cached unless dependencies change)
+RUN . .venv/bin/activate && uv sync --frozen
+
+# Copy application code (this layer changes frequently)
 COPY . .
-
-RUN uv pip install .
 
 EXPOSE 8000
 
-CMD ["uv", "run", "run.py"]
+# Use the virtual environment directly
+CMD [".venv/bin/python", "run.py"]
