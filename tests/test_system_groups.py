@@ -349,6 +349,75 @@ class TestGroupAPI:
         assert "not found" in response.json()["detail"]["message"]
 
     @pytest.mark.asyncio
+    async def test_update_member_role_deny_demote_group_owner(
+        self,
+        client: AsyncClient,
+        auth_token_header: dict,
+        sample_group_data: GroupModel,
+    ) -> None:
+        """Test that group owner cannot be demoted from admin role."""
+        # Create a group (creator becomes admin automatically)
+        create_response = await self._create_group(client, auth_token_header, sample_group_data)
+        assert create_response.status_code == status.HTTP_200_OK
+        group_id = create_response.json()["data"]["group"]["id"]
+
+        # Get the owner's user ID from the created group
+        owner_user_id = create_response.json()["data"]["group"]["created_by"]
+
+        # Register and login a second user
+        second_user_data = {
+            "email": "seconduser@example.com",
+            "username": "Second User",
+            "password": "SecurePassword123!",
+        }
+        register_response = await client.post("/users/register", json=second_user_data)
+        assert register_response.status_code == status.HTTP_200_OK
+
+        login_response = await client.post(
+            "/users/login",
+            json={
+                "email": second_user_data["email"],
+                "password": second_user_data["password"],
+            },
+        )
+        assert login_response.status_code == status.HTTP_200_OK
+        second_user_token = login_response.json()["data"]["token"]
+        second_user_headers = {"Authorization": f"Bearer {second_user_token}"}
+
+        # Add second user to the group as admin (so they can attempt role updates)
+        add_member_response = await client.post(
+            f"/groups/{group_id}/members",
+            headers=auth_token_header,
+            json=GroupMemberAddRequest(
+                email=second_user_data["email"],
+                role="Admin",
+            ).model_dump(),
+        )
+        assert add_member_response.status_code == status.HTTP_200_OK
+
+        # Try to demote the group owner (creator) from admin to member - should fail
+        response = await client.put(
+            f"/groups/{group_id}/members/{owner_user_id}/role",
+            headers=second_user_headers,  # Second admin trying to demote owner
+            json=GroupMemberRoleUpdateRequest(role="Member").model_dump(),
+        )
+
+        # Should return 400 Bad Request with specific error message about owner demotion
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        response_data = response.json()
+        assert "Owner cannot be demoted" in response_data["detail"]["message"]
+
+        # Verify the owner still has admin role
+        members_response = await client.get(f"/groups/{group_id}/members", headers=auth_token_header)
+        assert members_response.status_code == status.HTTP_200_OK
+        members = members_response.json()["data"]["members"]
+
+        # Find the owner in the members list and verify they're still admin
+        owner_member = next((m for m in members if m["id"] == owner_user_id), None)
+        assert owner_member is not None
+        assert owner_member["role"] == "Admin"
+
+    @pytest.mark.asyncio
     async def test_remove_group_member_not_found(
         self,
         client: AsyncClient,
