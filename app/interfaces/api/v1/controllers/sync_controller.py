@@ -9,7 +9,13 @@ from fastapi import APIRouter, Depends
 from app.dependencies.celery_dependencies import get_celery
 from app.exceptions.application_exception import ApplicationError
 from app.middleware.jwt_auth_middleware import get_current_user_id
-from app.schemas.sync_schema import SyncBulkRequest, SyncBulkResponse, SyncStatusData, SyncStatusResponse
+from app.schemas.sync_schema import (
+    SyncBulkRequest,
+    SyncBulkResponse,
+    SyncBulkResponseData,
+    SyncStatusData,
+    SyncStatusResponse,
+)
 from app.utils.create_exception_util import create_http_exception
 from app.utils.logger_util import get_logger
 from app.workers.sync_worker import bulk_sync
@@ -26,7 +32,7 @@ async def run_bulk_sync(
     try:
         task = bulk_sync.delay(request.model_dump(), current_user_id=str(current_user_id))
         # Return immediately with the task ID as operation ID
-        return SyncBulkResponse(operation_id=task.id)
+        return SyncBulkResponse(data=SyncBulkResponseData(operation_id=task.id))
     except ApplicationError as e:
         raise e.to_http_exception() from e
     except Exception as e:
@@ -41,6 +47,7 @@ async def run_bulk_sync(
 @router.get("/status/{operation_id}")
 async def get_sync_status(
     operation_id: str,
+    _: Annotated[uuid.UUID, Depends(get_current_user_id)],
 ) -> SyncStatusResponse:
     """Get the status of a sync operation by operation ID."""
     try:

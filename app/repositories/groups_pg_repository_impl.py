@@ -28,13 +28,20 @@ class GroupPGRepository(GroupRepositoryInterface):
         """
         self.session = session
 
-    async def create_group(self, name: str, created_by_id: uuid.UUID, description: str | None) -> GroupModel | None:
+    async def create_group(
+        self,
+        name: str,
+        created_by_id: uuid.UUID,
+        description: str | None,
+        group_id: uuid.UUID | None = None,  # Optional group ID for sync purposes
+    ) -> GroupModel | None:
         """Create a new group and return the group model.
 
         Args:
             name (str): The name of the group.
             created_by_id (uuid.UUID): The ID of the user who created the group.
             description (str): A description of the group.
+            group_id (uuid.UUID | None): Optional ID for the group, used for sync purposes.
 
         Returns:
             GroupModel | None: The created group data.
@@ -46,7 +53,7 @@ class GroupPGRepository(GroupRepositoryInterface):
         get_logger().debug("Creating group with name: %s", name)
 
         new_group = GroupModel(
-            id=uuid.uuid4(),
+            id=group_id or uuid.uuid4(),  # Use provided ID or generate a new one
             name=name,
             created_by=created_by_id,
             description=description,

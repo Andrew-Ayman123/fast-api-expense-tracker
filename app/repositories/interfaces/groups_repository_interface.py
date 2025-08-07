@@ -13,7 +13,13 @@ class GroupRepositoryInterface(ABC):
     """Abstract base class for group repository operations."""
 
     @abstractmethod
-    async def create_group(self, name: str, created_by_id: uuid.UUID, description: str | None) -> GroupModel | None:
+    async def create_group(
+        self,
+        name: str,
+        created_by_id: uuid.UUID,
+        description: str | None,
+        group_id: uuid.UUID | None = None,  # Optional group ID for sync purposes
+    ) -> GroupModel | None:
         """Create a new group and return the group model."""
 
     @abstractmethod
@@ -30,7 +36,10 @@ class GroupRepositoryInterface(ABC):
 
     @abstractmethod
     async def update_group(
-        self, group_id: uuid.UUID, name: str, description: str | None = None,
+        self,
+        group_id: uuid.UUID,
+        name: str,
+        description: str | None = None,
     ) -> GroupModel | None:
         """Update a group by its ID and return the updated group model."""
 

@@ -1,12 +1,12 @@
 # mypy: disable-error-code=arg-type
 
 """Dependency for repositories, providing access to the User repository."""
+
 from functools import lru_cache
 from typing import Annotated
 
 from fastapi import Depends
 
-from app.dependencies.database_dependencies import get_database_engine, get_database_session, get_session_maker
 from app.dependencies.repos_dependencies import (
     get_expense_participant_repository,
     get_expense_repository,
@@ -23,7 +23,6 @@ from app.repositories.interfaces.user_repository_interface import UserRepository
 from app.services.expense_service import ExpenseService
 from app.services.group_service import GroupService
 from app.services.jwt_service import JWTService
-from app.services.sync_service.sync_service import SyncService
 from app.services.user_service import UserService
 
 
@@ -31,7 +30,7 @@ def get_group_service(
     user_repository: Annotated[UserRepositoryInterface, Depends(get_user_repository)],
     group_repository: Annotated[GroupRepositoryInterface, Depends(get_group_repository)],
     group_member_repository: Annotated[GroupMemberRepositoryInterface, Depends(get_group_member_repository)],
-    ) -> GroupService:
+) -> GroupService:
     """Get the Group service instance.
 
     Note: This is a placeholder implementation. In a complete implementation,
@@ -51,7 +50,8 @@ def get_group_service(
 def get_expense_service(
     expense_repository: Annotated[ExpenseRepositoryInterface, Depends(get_expense_repository)],
     expense_participant_repository: Annotated[
-        ExpenseParticipantRepositoryInterface, Depends(get_expense_participant_repository),
+        ExpenseParticipantRepositoryInterface,
+        Depends(get_expense_participant_repository),
     ],
     group_service: Annotated[GroupService, Depends(get_group_service)],
     user_repository: Annotated[UserRepositoryInterface, Depends(get_user_repository)],
@@ -108,34 +108,4 @@ def get_user_service(
     """
     return UserService(
         user_repository=user_repository,
-    )
-def get_sync_service(
-) -> SyncService:
-    """Get the Sync service instance.
-
-    Args:
-        expense_service (ExpenseService): The Expense service instance.
-        group_service (GroupService): The Group service instance.
-
-    Returns:
-        SyncService: The Sync service instance.
-
-    """
-    session_maker= get_session_maker(get_database_engine())
-    session = get_database_session(session_maker)
-    group_service= get_group_service(
-        user_repository=get_user_repository(session),
-        group_repository=get_group_repository(session),
-        group_member_repository=get_group_member_repository(session),
-    )
-    expense_service= get_expense_service(
-        expense_repository=get_expense_repository(session),
-        expense_participant_repository=get_expense_participant_repository(session),
-        group_service=group_service,
-        user_repository=get_user_repository(session),
-
-    )
-    return SyncService(
-        expense_service=expense_service,
-        group_service=group_service,
     )

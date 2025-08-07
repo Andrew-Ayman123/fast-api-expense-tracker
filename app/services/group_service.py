@@ -48,6 +48,7 @@ class GroupService:
         self,
         group_data: GroupCreateRequest,
         created_by_id: uuid.UUID,
+        group_id: uuid.UUID | None = None,  # Optional group ID for sync purposes
     ) -> tuple[GroupModel, int, GroupMembersRoleEnum]:
         """Create a new group and add the creator as an admin."""
         try:
@@ -55,6 +56,7 @@ class GroupService:
                 name=group_data.name,
                 created_by_id=created_by_id,
                 description=group_data.description,
+                group_id=group_id,  # Use provided ID or generate a new one
             )
 
             if not group:
@@ -69,7 +71,7 @@ class GroupService:
             member_count = await self.group_member_repository.count_members_in_group(group.id)
 
         except IntegrityError as e:
-            msg = f"Failed to create group: {e!s}"
+            msg = f"Group with id {group_id} already exists"
             raise GroupCreationError(msg) from e
         else:
             return (group, member_count, GroupMembersRoleEnum.ADMIN)

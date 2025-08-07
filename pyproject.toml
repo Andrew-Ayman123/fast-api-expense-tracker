@@ -28,10 +28,10 @@ dependencies = [
     "types-python-jose>=3.5.0.20250531",
     "pre-commit>=4.2.0",
     "httpx>=0.28.1",
-    "celery[redis]>=5.3.0",
+    "celery[eventlet,gevent,redis]>=5.3.0",
     "flower>=1.2.0",
-
     "gevent>=25.5.1",
+    "eventlet>=0.40.2",
 ]
 
 [tool.pytest.ini_options]

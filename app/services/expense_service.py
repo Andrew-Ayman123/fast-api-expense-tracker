@@ -181,6 +181,7 @@ class ExpenseService:
         group_id: uuid.UUID,
         expense_data: ExpenseCreateRequest,
         current_user_id: uuid.UUID,
+        expense_id: uuid.UUID | None = None,  # Optional expense ID for sync purposes
     ) -> tuple[ExpenseModel, UserModel, list[UserModel]]:
         """Create a new expense if the user is a member of the group."""
         # Check if current user is member of the group
@@ -207,6 +208,7 @@ class ExpenseService:
                 payer_id=expense_data.payer_id,
                 category=ExpenseCategoryEnum(expense_data.category),
                 expense_date=expense_data.date,
+                expense_id=expense_id,  # Use provided ID or generate a new one
             )
 
             if not expense:
@@ -221,7 +223,7 @@ class ExpenseService:
             )
 
         except IntegrityError as e:
-            msg = f"Failed to create expense: {e!s}"
+            msg = f"Expense with id {expense_id} already exists in group {group_id}"
             raise ExpenseCreationError(msg) from e
         else:
             return (expense, payer_user_model, participant_users)

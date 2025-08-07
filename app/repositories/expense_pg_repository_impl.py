@@ -37,6 +37,7 @@ class ExpensePGRepository(ExpenseRepositoryInterface):
         payer_id: uuid.UUID,
         category: ExpenseCategoryEnum,
         expense_date: date,
+        expense_id: uuid.UUID | None = None,  # Optional expense ID for sync purposes
     ) -> ExpenseModel | None:
         """Create a new expense for a group.
 
@@ -47,6 +48,7 @@ class ExpensePGRepository(ExpenseRepositoryInterface):
             payer_id (uuid.UUID): The ID of the user who created the expense.
             category (ExpenseCategoryEnum): The category of the expense.
             expense_date (date): The date of the expense.
+            expense_id (uuid.UUID | None): Optional ID for the expense, used for sync purposes.
 
 
         Returns:
@@ -59,7 +61,7 @@ class ExpensePGRepository(ExpenseRepositoryInterface):
         get_logger().debug("Creating expense with title: %s", title)
 
         new_expense = ExpenseModel(
-            id=uuid.uuid4(),
+            id=expense_id or uuid.uuid4(),  # Use provided ID or generate a new one
             title=title,
             amount=amount,
             group_id=group_id,

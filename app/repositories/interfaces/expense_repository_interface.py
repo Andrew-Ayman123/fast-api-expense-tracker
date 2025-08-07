@@ -22,6 +22,7 @@ class ExpenseRepositoryInterface(ABC):
         payer_id: uuid.UUID,
         category: ExpenseCategoryEnum,
         expense_date: date,
+        expense_id: uuid.UUID | None = None,  # Optional expense ID for sync purposes
     ) -> ExpenseModel | None:
         """Create a new expense for a group."""
 
