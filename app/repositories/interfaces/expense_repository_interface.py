@@ -5,7 +5,7 @@ This module defines the abstract interface for Expense repository operations.
 
 import uuid
 from abc import ABC, abstractmethod
-from datetime import date
+from datetime import date, datetime
 
 from app.models import ExpenseCategoryEnum, ExpenseModel
 
@@ -22,6 +22,8 @@ class ExpenseRepositoryInterface(ABC):
         payer_id: uuid.UUID,
         category: ExpenseCategoryEnum,
         expense_date: date,
+        expense_id: uuid.UUID | None = None,  # Optional expense ID for sync purposes
+        created_at: datetime | None = None,
     ) -> ExpenseModel | None:
         """Create a new expense for a group."""
 
@@ -38,13 +40,14 @@ class ExpenseRepositoryInterface(ABC):
         """Delete an expense by its ID."""
 
     @abstractmethod
-    async def update_expense(
+    async def update_expense(  # noqa: PLR0913
         self,
         expense_id: uuid.UUID,
-        title: str | None = None,
-        amount: float | None = None,
-        category: ExpenseCategoryEnum | None = None,
-        expense_date: date | None = None,
+        title: str,
+        amount: float,
+        category: ExpenseCategoryEnum,
+        expense_date: date,
+        updated_at: datetime | None = None,
     ) -> ExpenseModel | None:
         """Update an expense by its ID and return the updated expense model."""
 

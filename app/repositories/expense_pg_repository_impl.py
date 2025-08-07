@@ -5,7 +5,7 @@ using SQLAlchemy ORM with async session.
 """
 
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime
 
 from sqlalchemy import func, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -37,6 +37,8 @@ class ExpensePGRepository(ExpenseRepositoryInterface):
         payer_id: uuid.UUID,
         category: ExpenseCategoryEnum,
         expense_date: date,
+        expense_id: uuid.UUID | None = None,  # Optional expense ID for sync purposes
+        created_at: datetime | None = None,
     ) -> ExpenseModel | None:
         """Create a new expense for a group.
 
@@ -47,6 +49,8 @@ class ExpensePGRepository(ExpenseRepositoryInterface):
             payer_id (uuid.UUID): The ID of the user who created the expense.
             category (ExpenseCategoryEnum): The category of the expense.
             expense_date (date): The date of the expense.
+            expense_id (uuid.UUID | None): Optional ID for the expense, used for sync purposes.
+            created_at (datetime | None): Optional timestamp for when the expense was created.
 
 
         Returns:
@@ -59,13 +63,15 @@ class ExpensePGRepository(ExpenseRepositoryInterface):
         get_logger().debug("Creating expense with title: %s", title)
 
         new_expense = ExpenseModel(
-            id=uuid.uuid4(),
+            id=expense_id or uuid.uuid4(),  # Use provided ID or generate a new one
             title=title,
             amount=amount,
             group_id=group_id,
             payer_id=payer_id,
             category=category,
             date=expense_date,
+            created_at=created_at or datetime.now(tz=UTC),
+            updated_at=created_at or datetime.now(tz=UTC),
         )
 
         self.session.add(new_expense)
@@ -149,13 +155,14 @@ class ExpensePGRepository(ExpenseRepositoryInterface):
         get_logger().debug("Counting expenses for group ID: %s, found: %s", group_id, count)
         return count or 0
 
-    async def update_expense(
+    async def update_expense(  # noqa: PLR0913
         self,
         expense_id: uuid.UUID,
-        title: str | None = None,
-        amount: float | None = None,
-        category: ExpenseCategoryEnum | None = None,
-        expense_date: date | None = None,
+        title: str,
+        amount: float,
+        category: ExpenseCategoryEnum,
+        expense_date: date,
+        updated_at: datetime | None = None,
     ) -> ExpenseModel | None:
         """Update an existing expense.
 
@@ -165,6 +172,7 @@ class ExpensePGRepository(ExpenseRepositoryInterface):
             amount (float): The new amount of the expense.
             category (ExpenseCategoryEnum): The new category of the expense.
             expense_date (date): The new date of the expense.
+            updated_at (datetime | None): Optional timestamp for when the expense was updated.
 
         Returns:
             ExpenseModel | None: The updated expense data or None if not found.
@@ -175,7 +183,13 @@ class ExpensePGRepository(ExpenseRepositoryInterface):
         stmt = (
             update(ExpenseModel)
             .where(ExpenseModel.id == expense_id)
-            .values(title=title, amount=amount, category=category, date=expense_date)
+            .values(
+                title=title,
+                amount=amount,
+                category=category,
+                date=expense_date,
+                updated_at=updated_at or datetime.now(tz=UTC),
+            )
             .returning(ExpenseModel)
             .execution_options(synchronize_session="fetch")
         )

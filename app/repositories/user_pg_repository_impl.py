@@ -99,7 +99,14 @@ class UserPGRepository(UserRepositoryInterface):
         query = select(UserModel).where(UserModel.id.in_(user_ids))
         result = await self.session.execute(query)
         return list(result.scalars().all())
-    async def update_user(self, user_id: uuid.UUID, email: str | None = None, username: str | None = None, password_hash: str | None = None) -> UserModel | None:  # noqa: E501
+
+    async def update_user(
+        self,
+        user_id: uuid.UUID,
+        email: str | None = None,
+        username: str | None = None,
+        password_hash: str | None = None,
+    ) -> UserModel | None:
         """Update user data.
 
         Args:
@@ -112,11 +119,16 @@ class UserPGRepository(UserRepositoryInterface):
             UserModel | None: The updated user data if successful, else None.
 
         """
-        query = update(UserModel).where(UserModel.id == user_id).values(
-            email=email,
-            username=username,
-            password=password_hash,
-        ).returning(UserModel)
+        query = (
+            update(UserModel)
+            .where(UserModel.id == user_id)
+            .values(
+                email=email,
+                username=username,
+                password=password_hash,
+            )
+            .returning(UserModel)
+        )
 
         result = await self.session.execute(query)
         updated_user = result.scalar_one_or_none()

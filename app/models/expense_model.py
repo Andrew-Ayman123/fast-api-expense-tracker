@@ -4,6 +4,7 @@ Defines the ExpenseModel for managing expense-related data.
 """
 
 import uuid
+from datetime import datetime
 
 from sqlalchemy import Date, DateTime, Enum, Float, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
@@ -56,13 +57,13 @@ class ExpenseModel(Base):
         nullable=False,
     )
 
-    created_at: Mapped[DateTime] = mapped_column(
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
         onupdate=func.now(),
     )
 
-    updated_at: Mapped[DateTime] = mapped_column(
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
         onupdate=func.now(),

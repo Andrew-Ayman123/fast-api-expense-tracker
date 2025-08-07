@@ -1,6 +1,7 @@
 # mypy: disable-error-code=arg-type
 
 """Dependency for repositories, providing access to the User repository."""
+
 from functools import lru_cache
 from typing import Annotated
 
@@ -29,7 +30,7 @@ def get_group_service(
     user_repository: Annotated[UserRepositoryInterface, Depends(get_user_repository)],
     group_repository: Annotated[GroupRepositoryInterface, Depends(get_group_repository)],
     group_member_repository: Annotated[GroupMemberRepositoryInterface, Depends(get_group_member_repository)],
-    ) -> GroupService:
+) -> GroupService:
     """Get the Group service instance.
 
     Note: This is a placeholder implementation. In a complete implementation,
@@ -49,7 +50,8 @@ def get_group_service(
 def get_expense_service(
     expense_repository: Annotated[ExpenseRepositoryInterface, Depends(get_expense_repository)],
     expense_participant_repository: Annotated[
-        ExpenseParticipantRepositoryInterface, Depends(get_expense_participant_repository),
+        ExpenseParticipantRepositoryInterface,
+        Depends(get_expense_participant_repository),
     ],
     group_service: Annotated[GroupService, Depends(get_group_service)],
     user_repository: Annotated[UserRepositoryInterface, Depends(get_user_repository)],

@@ -40,3 +40,6 @@ class Settings(BaseSettings):
     allowed_origins: list[str] = ["*"]
     allowed_methods: list[str] = ["*"]
     allowed_headers: list[str] = ["*"]
+
+    celery_broker_url: str = get_env("CELERY_BROKER_URL")
+    celery_result_backend: str = get_env("CELERY_RESULT_BACKEND")
