@@ -374,7 +374,6 @@ async def update_member_role(
 async def remove_group_member(
     group_id: uuid.UUID,
     user_id: uuid.UUID,
-    current_user_id: Annotated[uuid.UUID, Depends(get_current_user_id)],
     group_service: Annotated[GroupService, Depends(get_group_service)],
     _: Annotated[None, Depends(verify_user_admin_role)],
 ) -> None:
@@ -396,7 +395,7 @@ async def remove_group_member(
 
     """
     try:
-        await group_service.remove_member(group_id, user_id, current_user_id)
+        await group_service.remove_member(group_id, user_id)
     except ApplicationError as e:
         raise e.to_http_exception() from e
     except Exception as e:

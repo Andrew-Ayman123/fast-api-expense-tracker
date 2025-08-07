@@ -189,13 +189,14 @@ class GroupService:
         self,
         group_id: uuid.UUID,
         member_user_id: uuid.UUID,
-        requesting_user_id: uuid.UUID,
     ) -> None:
         """Remove a member from a group if the requesting user is an admin."""
-        if requesting_user_id == member_user_id:
-            group = await self.group_repository.get_group_by_id(group_id)
-            if group and group.created_by == requesting_user_id:
-                raise GroupOwnerCannotLeaveError(requesting_user_id, group_id)
+        group = await self.group_repository.get_group_by_id(group_id)
+        if not group:
+            raise GroupNotFoundError(group_id)
+
+        if group.created_by == member_user_id:
+            raise GroupOwnerCannotLeaveError(member_user_id , group_id)
 
         is_removed = await self.group_member_repository.remove_member(member_user_id, group_id)
 
