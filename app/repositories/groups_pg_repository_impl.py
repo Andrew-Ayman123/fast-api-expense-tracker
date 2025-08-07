@@ -5,6 +5,7 @@ using SQLAlchemy ORM for database operations with async session.
 """
 
 import uuid
+from datetime import UTC, datetime
 
 from sqlalchemy import func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,6 +35,7 @@ class GroupPGRepository(GroupRepositoryInterface):
         created_by_id: uuid.UUID,
         description: str | None,
         group_id: uuid.UUID | None = None,  # Optional group ID for sync purposes
+        created_at: datetime | None = None,
     ) -> GroupModel | None:
         """Create a new group and return the group model.
 
@@ -42,6 +44,7 @@ class GroupPGRepository(GroupRepositoryInterface):
             created_by_id (uuid.UUID): The ID of the user who created the group.
             description (str): A description of the group.
             group_id (uuid.UUID | None): Optional ID for the group, used for sync purposes.
+            created_at (datetime | None): Optional timestamp for when the group was created.
 
         Returns:
             GroupModel | None: The created group data.
@@ -57,6 +60,8 @@ class GroupPGRepository(GroupRepositoryInterface):
             name=name,
             created_by=created_by_id,
             description=description,
+            created_at=created_at or datetime.now(tz=UTC),
+            updated_at=created_at or datetime.now(tz=UTC),
         )
 
         self.session.add(new_group)
@@ -166,13 +171,20 @@ class GroupPGRepository(GroupRepositoryInterface):
         result = await self.session.execute(query)
         return result.scalar_one() or 0
 
-    async def update_group(self, group_id: uuid.UUID, name: str, description: str | None = None) -> GroupModel | None:
+    async def update_group(
+        self,
+        group_id: uuid.UUID,
+        name: str,
+        description: str | None,
+        updated_at: datetime | None = None,
+    ) -> GroupModel | None:
         """Update a group's name and description.
 
         Args:
             group_id (uuid.UUID): The ID of the group to update.
             name (str): The new name for the group.
             description (str): The new description for the group.
+            updated_at (datetime | None): Optional timestamp for when the group was updated.
 
         Returns:
             GroupModel | None: The updated group data if successful, otherwise None.
@@ -188,6 +200,7 @@ class GroupPGRepository(GroupRepositoryInterface):
         if group:
             group.name = name
             group.description = description
+            group.updated_at = updated_at or datetime.now(tz=UTC)
             await self.session.commit()
             await self.session.refresh(group)
             return group

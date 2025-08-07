@@ -6,6 +6,7 @@ and UserRepositoryInterface to perform CRUD operations on expenses and their par
 """
 
 import uuid
+from datetime import datetime
 
 from sqlalchemy.exc import IntegrityError
 
@@ -182,6 +183,7 @@ class ExpenseService:
         expense_data: ExpenseCreateRequest,
         current_user_id: uuid.UUID,
         expense_id: uuid.UUID | None = None,  # Optional expense ID for sync purposes
+        created_at: datetime | None = None,  # Optional creation timestamp
     ) -> tuple[ExpenseModel, UserModel, list[UserModel]]:
         """Create a new expense if the user is a member of the group."""
         # Check if current user is member of the group
@@ -209,6 +211,7 @@ class ExpenseService:
                 category=ExpenseCategoryEnum(expense_data.category),
                 expense_date=expense_data.date,
                 expense_id=expense_id,  # Use provided ID or generate a new one
+                created_at=created_at,  # Use provided timestamp
             )
 
             if not expense:
@@ -288,6 +291,7 @@ class ExpenseService:
         expense_id: uuid.UUID,
         expense_data: ExpenseUpdateRequest,
         user_id: uuid.UUID,
+        updated_at: datetime | None = None,  # Optional update timestamp
     ) -> tuple[ExpenseModel, UserModel, list[UserModel]]:
         """Update an expense if the user is a member of the group."""
         expense = await self._get_expense_or_raise(expense_id)
@@ -305,6 +309,7 @@ class ExpenseService:
             amount=expense_data.amount,
             category=ExpenseCategoryEnum(expense_data.category),
             expense_date=expense_data.date,
+            updated_at=updated_at,  # Use provided timestamp
         )
 
         if not updated_expense:

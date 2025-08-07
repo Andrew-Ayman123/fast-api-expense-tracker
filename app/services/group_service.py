@@ -6,6 +6,7 @@ to perform CRUD operations on groups and their members.
 """
 
 import uuid
+from datetime import datetime
 
 from sqlalchemy.exc import IntegrityError
 
@@ -49,6 +50,7 @@ class GroupService:
         group_data: GroupCreateRequest,
         created_by_id: uuid.UUID,
         group_id: uuid.UUID | None = None,  # Optional group ID for sync purposes
+        created_at: datetime | None = None,  # Optional creation timestamp
     ) -> tuple[GroupModel, int, GroupMembersRoleEnum]:
         """Create a new group and add the creator as an admin."""
         try:
@@ -57,6 +59,7 @@ class GroupService:
                 created_by_id=created_by_id,
                 description=group_data.description,
                 group_id=group_id,  # Use provided ID or generate a new one
+                created_at=created_at,  # Use provided timestamp
             )
 
             if not group:
@@ -114,12 +117,14 @@ class GroupService:
         group_id: uuid.UUID,
         group_data: GroupUpdateRequest,
         user_id: uuid.UUID,
+        updated_at: datetime | None = None,  # Optional update timestamp
     ) -> tuple[GroupModel, int, GroupMembersRoleEnum]:
         """Update a group if the user is an admin."""
         updated_group = await self.group_repository.update_group(
             group_id=group_id,
             name=group_data.name,
             description=group_data.description,
+            updated_at=updated_at,  # Use provided timestamp
         )
 
         if not updated_group:

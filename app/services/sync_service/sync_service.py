@@ -50,6 +50,7 @@ class SyncService:
                 expense_data=ExpenseCreateRequest.model_validate(entity_data.model_dump()),
                 current_user_id=current_user_id,
                 expense_id=change.entity_id,
+                created_at=change.timestamp,  # Use change timestamp as creation time
             )
             return f"Success: Expense {expense[0].id} created successfully"
         except IntegrityError:
@@ -72,6 +73,7 @@ class SyncService:
                 group_data=GroupCreateRequest.model_validate(entity_data.model_dump()),
                 created_by_id=current_user_id,
                 group_id=change.entity_id,
+                created_at=change.timestamp,  # Use change timestamp as creation time
             )
             return f"Success: Group {group[0].id} created successfully"
         except IntegrityError:
@@ -103,6 +105,7 @@ class SyncService:
                 expense_id=entity_id,
                 expense_data=ExpenseUpdateRequest.model_validate(entity_data.model_dump()),
                 user_id=current_user_id,
+                updated_at=change_timestamp,  # Use change timestamp as update time
             )
             return f"Success: Expense {updated_expense[0].id} updated successfully"
         except Exception as e:  # noqa: BLE001
@@ -132,6 +135,7 @@ class SyncService:
                 group_id=entity_id,
                 group_data=GroupUpdateRequest.model_validate(entity_data.model_dump()),
                 user_id=current_user_id,
+                updated_at=change_timestamp,  # Use change timestamp as update time
             )
             return f"Success: Group {updated_group[0].id} updated successfully"
         except Exception as e:  # noqa: BLE001

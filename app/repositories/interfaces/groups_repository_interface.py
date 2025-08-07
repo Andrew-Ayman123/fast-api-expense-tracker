@@ -5,6 +5,7 @@ This module defines the abstract interface for Group repository operations.
 
 import uuid
 from abc import ABC, abstractmethod
+from datetime import datetime
 
 from app.models import GroupModel
 
@@ -19,6 +20,7 @@ class GroupRepositoryInterface(ABC):
         created_by_id: uuid.UUID,
         description: str | None,
         group_id: uuid.UUID | None = None,  # Optional group ID for sync purposes
+        created_at: datetime | None = None, # Optional creation timestamp
     ) -> GroupModel | None:
         """Create a new group and return the group model."""
 
@@ -39,7 +41,8 @@ class GroupRepositoryInterface(ABC):
         self,
         group_id: uuid.UUID,
         name: str,
-        description: str | None = None,
+        description: str | None,
+        updated_at: datetime | None = None,  # Optional update timestamp
     ) -> GroupModel | None:
         """Update a group by its ID and return the updated group model."""
 
