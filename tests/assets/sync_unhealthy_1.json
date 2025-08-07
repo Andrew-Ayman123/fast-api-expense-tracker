@@ -1,0 +1,50 @@
+{
+  "changes": [
+    {
+      "type": "create",
+      "entity": "expense",
+      "entity_id": "invalid1-51a2-4d3c-8765-invalid1111",
+      "data": {
+        "title": "",
+        "amount": -50.00,
+        "payer_id": "invalid-uuid-format",
+        "category": "InvalidCategory",
+        "date": "2025-13-45",
+        "is_payer_included": true,
+        "participants_id": [
+          "not-a-uuid",
+          "another-invalid-uuid"
+        ],
+        "group_id": "also-not-a-uuid"
+      },
+      "timestamp": "not-a-valid-timestamp"
+    },
+    {
+      "type": "invalidtype",
+      "entity": "expense",
+      "entity_id": "invalid2-51a2-4d3c-8765-invalid2222",
+      "data": {
+        "title": "Valid Title",
+        "amount": 25.50,
+        "payer_id": "<user_id>",
+        "category": "Food",
+        "date": "2025-08-06",
+        "is_payer_included": true,
+        "participants_id": [
+          "<user_id>"
+        ],
+        "group_id": "123e4567-e89b-12d3-a456-426614174000"
+      },
+      "timestamp": "2025-08-07T10:00:00Z"
+    },
+    {
+      "type": "create",
+      "entity": "invalidentity",
+      "entity_id": "invalid3-51a2-4d3c-8765-invalid3333",
+      "data": {
+        "name": "Some Group"
+      },
+      "timestamp": "2025-08-07T10:00:00Z"
+    }
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "changes": [
+    {
+      "type": "create",
+      "entity": "group",
+      "entity_id": "789e4567-e89b-12d3-a456-426614174111",
+      "data": {
+        "name": "Business Conference",
+        "description": "Expenses for the annual business conference"
+      },
+      "timestamp": "2025-08-07T08:00:00Z"
+    },
+    {
+      "type": "create",
+      "entity": "expense",
+      "entity_id": "111fcdeb-51a2-4d3c-8765-111111111111",
+      "data": {
+        "title": "Conference Registration",
+        "amount": 350.00,
+        "payer_id": "<user_id>",
+        "category": "Other",
+        "date": "2025-08-05",
+        "is_payer_included": true,
+        "participants_id": [
+        ],
+        "group_id": "789e4567-e89b-12d3-a456-426614174111"
+      },
+      "timestamp": "2025-08-07T08:30:00Z"
+    },
+    {
+      "type": "create",
+      "entity": "expense",
+      "entity_id": "222fcdeb-51a2-4d3c-8765-222222222222",
+      "data": {
+        "title": "Taxi to Airport",
+        "amount": 45.25,
+        "payer_id": "<user_id>",
+        "category": "Transport",
+        "date": "2025-08-05",
+        "is_payer_included": true,
+        "participants_id": [
+        ],
+        "group_id": "789e4567-e89b-12d3-a456-426614174111"
+      },
+      "timestamp": "2025-08-07T09:00:00Z"
+    },
+    {
+      "type": "update",
+      "entity": "group",
+      "entity_id": "789e4567-e89b-12d3-a456-426614174111",
+      "data": {
+        "name": "Tech Conference 2025",
+        "description": "Annual technology conference expenses - updated description"
+      },
+      "timestamp": "2025-08-07T13:00:00Z"
+    },
+    {
+      "type": "delete",
+      "entity": "expense",
+      "entity_id": "222fcdeb-51a2-4d3c-8765-222222222222",
+      "timestamp": "2025-08-07T14:00:00Z"
+    }
+  ]
+}

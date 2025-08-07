@@ -1,0 +1,70 @@
+{
+  "changes": [
+    {
+      "type": "create",
+      "entity": "group",
+      "entity_id": "123e4567-e89b-12d3-a456-426614174000",
+      "data": {
+        "name": "Weekend Trip",
+        "description": "Expenses for our weekend getaway"
+      },
+      "timestamp": "2025-08-07T10:00:00Z"
+    },
+    {
+      "type": "create",
+      "entity": "expense",
+      "entity_id": "987fcdeb-51a2-4d3c-8765-123456789abc",
+      "data": {
+        "title": "Hotel Booking",
+        "amount": 245.50,
+        "payer_id": "<user_id>",
+        "category": "Transport",
+        "date": "2025-08-06",
+        "is_payer_included": true,
+        "participants_id": [
+        ],
+        "group_id": "123e4567-e89b-12d3-a456-426614174000"
+      },
+      "timestamp": "2025-08-07T10:30:00Z"
+    },
+    {
+      "type": "create",
+      "entity": "expense",
+      "entity_id": "456fcdeb-51a2-4d3c-8765-987654321def",
+      "data": {
+        "title": "Dinner at Restaurant",
+        "amount": 89.75,
+        "payer_id": "<user_id>",
+        "category": "Food",
+        "date": "2025-08-06",
+        "is_payer_included": true,
+        "participants_id": [
+        ],
+        "group_id": "123e4567-e89b-12d3-a456-426614174000"
+      },
+      "timestamp": "2025-08-07T11:00:00Z"
+    },
+    {
+      "type": "update",
+      "entity": "expense",
+      "entity_id": "987fcdeb-51a2-4d3c-8765-123456789abc",
+      "data": {
+        "title": "Hotel Booking (Updated)",
+        "amount": 235.50,
+        "payer_id": "<user_id>",
+        "category": "Transport",
+        "date": "2025-08-06",
+        "is_payer_included": true,
+        "participants_id": [
+        ]
+      },
+      "timestamp": "2025-08-07T12:00:00Z"
+    },
+    {
+      "type": "delete",
+      "entity": "expense",
+      "entity_id": "456fcdeb-51a2-4d3c-8765-987654321def",
+      "timestamp": "2025-08-07T12:30:00Z"
+    }
+  ]
+}
