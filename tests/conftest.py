@@ -17,7 +17,7 @@ from app.schemas.user_schema import UserCreateRequest
 
 
 @pytest_asyncio.fixture()
-async def client() -> AsyncGenerator[AsyncClient, None]:
+async def client_v1() -> AsyncGenerator[AsyncClient, None]:
     """Fixture to create an AsyncClient for testing FastAPI endpoints.
 
     It deletes all the data from the users table before yielding the client.
