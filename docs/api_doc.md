@@ -3,7 +3,7 @@
 ## Base URL
 
 ```
-https://api.expensetracker.com/api/v1
+https://<server_url+port>/api/v1
 ```
 
 ## Authentication
@@ -1014,6 +1014,120 @@ Authorization: Bearer <jwt_token>
 
 - `401 Unauthorized`: Invalid or expired token
 - `404 Not Found`: Operation not found
+
+---
+
+## Sync Endpoints (v2 - WebSocket Based)
+
+Version 2 introduces a WebSocket-based bulk sync endpoint that replaces the request/response plus polling model of v1 (`POST /sync/bulk` + `GET /sync/status/{operation_id}`) with a single persistent connection for the whole operation.
+
+### Base URL (v2)
+
+```
+https://<server_url+port>/api/v2
+```
+
+### WebSocket Endpoint
+
+```
+GET ws(s)://<server_url+port>/api/v2/sync/bulk/ws?token=<JWT>
+```
+
+Notes:
+- The `token` query parameter MUST contain a valid JWT access token (same format as Authorization header in v1).
+- The connection is accepted only after token validation. Missing / invalid tokens cause the server to send an error frame then close.
+- Payload is sent once by the client after the connection is established (no streaming changes yet).
+- The server currently responds with an `ack` message immediately, then a `completed` (or `error`) message when processing finishes.
+
+### Client -> Server First Message
+
+Immediately after `101 Switching Protocols` (i.e., after `websocket.accept()`), the client must send a JSON object matching the `SyncBulkRequest` schema:
+
+```json
+{
+  "changes": [
+    {
+      "type": "create",             // create | update | delete
+      "entity": "expense",          // expense | group
+      "entity_id": "987fcdeb-51a2-4d3c-8765-123456789abc", // UUID
+      "data": {                      // Required for create/update, omitted for delete
+        "group_id": "123e4567-e89b-12d3-a456-426614174000", // create expense only
+        "title": "Coffee",
+        "amount": 5.75,
+        "payer_id": "550e8400-e29b-41d4-a716-446655440000",
+        "category": "Food",         // Food | Transport | Accommodation | Entertainment | Other
+        "date": "2025-08-01",
+        "is_payer_included": true,
+        "participants_id": ["550e8400-e29b-41d4-a716-446655440000"]
+      },
+      "timestamp": "2025-08-01T10:30:00Z"
+    }
+  ]
+}
+```
+
+### Server -> Client Message Types
+
+1. Acknowledgement (always first if validation passes):
+
+```json
+{
+  "type": "ack",
+  "operation_id": "2b6d8f0e-3f6a-4e9d-b7a2-4b2b9d9c1ef2",
+  "status": "started",
+  "created_at": "2025-08-01T10:30:01.123456+00:00"
+}
+```
+
+2. Completion (success path):
+
+```json
+{
+  "type": "completed",
+  "operation_id": "2b6d8f0e-3f6a-4e9d-b7a2-4b2b9d9c1ef2",
+  "status": "completed",
+  "completed_at": "2025-08-01T10:30:02.456789+00:00",
+  "notifications": [
+    "expense:987fcdeb-51a2-4d3c-8765-123456789abc:created"
+  ]
+}
+```
+
+3. Error (validation / auth / processing error):
+
+```json
+{
+  "type": "error",
+  "operation_id": "2b6d8f0e-3f6a-4e9d-b7a2-4b2b9d9c1ef2",
+  "status": "failed",
+  "error": "Invalid token"
+}
+```
+
+### Close Codes Used
+
+| Code | Meaning |
+|------|---------|
+| 4401 | Missing token |
+| 4403 | Invalid token |
+| 4400 | Invalid payload (JSON / schema validation) |
+| 1011 | Internal server error during processing |
+
+Normal successful completion closes with the default normal closure code (1000).
+
+### Differences vs v1
+
+- Single persistent connection instead of separate HTTP request + polling.
+- Immediate acknowledgement eliminates need for `202 Accepted` polling pattern.
+- `operation_id` still provided for correlation (UUID generated server-side).
+- Currently only one bulk request per connection (no streaming multiple batches yet).
+
+### Error Handling Semantics
+
+- Schema validation failures occur before `ack` and result in an `error` then close.
+- Processing errors after `ack` produce an `error` message then close with code 1011.
+- If the client disconnects early, the operation is aborted (idempotent—no partial commits guaranteed only at application layer; refer to service implementation for transactional guarantees).
+
 
 ---
 

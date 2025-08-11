@@ -20,8 +20,8 @@ logger = logging.getLogger(__name__)
 class TestUserAPI:
     """System tests for user registration, login, profile, and token refresh."""
 
-    async def _register_user(self, client: AsyncClient, user: UserModel) -> Response:
-        return await client.post(
+    async def _register_user(self, client_v1: AsyncClient, user: UserModel) -> Response:
+        return await client_v1.post(
             "/users/register",
             json=UserCreateRequest(
                 email=user.email,
@@ -30,8 +30,8 @@ class TestUserAPI:
             ).model_dump(),
         )
 
-    async def _login_user(self, client: AsyncClient, user: UserModel) -> Response:
-        return await client.post(
+    async def _login_user(self, client_v1: AsyncClient, user: UserModel) -> Response:
+        return await client_v1.post(
             "/users/login",
             json=UserLoginRequest(
                 email=user.email,
@@ -40,9 +40,9 @@ class TestUserAPI:
         )
 
     @pytest.mark.asyncio
-    async def test_register_user_success(self, client: AsyncClient, sample_user_data: UserModel) -> None:
+    async def test_register_user_success(self, client_v1: AsyncClient, sample_user_data: UserModel) -> None:
         """Test successful user registration."""
-        response = await self._register_user(client, sample_user_data)
+        response = await self._register_user(client_v1, sample_user_data)
 
         assert response.status_code == status.HTTP_200_OK
         json = response.json()
@@ -51,18 +51,18 @@ class TestUserAPI:
         assert json["data"]["user"]["email"] == sample_user_data.email
 
     @pytest.mark.asyncio
-    async def test_register_user_conflict(self, client: AsyncClient, sample_user_data: UserModel) -> None:
+    async def test_register_user_conflict(self, client_v1: AsyncClient, sample_user_data: UserModel) -> None:
         """Test registering an already existing user returns conflict."""
-        await self._register_user(client, sample_user_data)
-        response = await self._register_user(client, sample_user_data)
+        await self._register_user(client_v1, sample_user_data)
+        response = await self._register_user(client_v1, sample_user_data)
 
         assert response.status_code == status.HTTP_409_CONFLICT
 
     @pytest.mark.asyncio
-    async def test_login_user_success(self, client: AsyncClient, sample_user_data: UserModel) -> None:
+    async def test_login_user_success(self, client_v1: AsyncClient, sample_user_data: UserModel) -> None:
         """Test login with correct credentials."""
-        await self._register_user(client, sample_user_data)
-        response = await self._login_user(client, sample_user_data)
+        await self._register_user(client_v1, sample_user_data)
+        response = await self._login_user(client_v1, sample_user_data)
 
         assert response.status_code == status.HTTP_200_OK
         json = response.json()
@@ -71,9 +71,9 @@ class TestUserAPI:
         assert json["data"]["user"]["email"] == sample_user_data.email
 
     @pytest.mark.asyncio
-    async def test_login_wrong_credentials(self, client: AsyncClient) -> None:
+    async def test_login_wrong_credentials(self, client_v1: AsyncClient) -> None:
         """Test login failure with wrong credentials."""
-        response = await client.post(
+        response = await client_v1.post(
             "/users/login",
             json=UserLoginRequest(email="wrong@example.com", password="badpassword").model_dump(),  # noqa: S106
         )
@@ -82,29 +82,29 @@ class TestUserAPI:
 
     @pytest.mark.asyncio
     async def test_get_profile_success(
-        self, client: AsyncClient, auth_token_header: dict, sample_user_data: UserModel,
+        self, client_v1: AsyncClient, auth_token_header: dict, sample_user_data: UserModel,
     ) -> None:
         """Test profile retrieval with valid token."""
-        response = await client.get("/users/me", headers=auth_token_header)
+        response = await client_v1.get("/users/me", headers=auth_token_header)
         assert response.status_code == status.HTTP_200_OK
         json = response.json()
         assert json["data"]["user"]["email"] == sample_user_data.email
 
     @pytest.mark.asyncio
-    async def test_get_profile_unauthorized(self, client: AsyncClient) -> None:
+    async def test_get_profile_unauthorized(self, client_v1: AsyncClient) -> None:
         """Test profile retrieval without JWT token."""
-        response = await client.get("/users/me")
+        response = await client_v1.get("/users/me")
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
     @pytest.mark.asyncio
-    async def test_refresh_token_success(self, client: AsyncClient, sample_user_data: UserModel) -> None:
+    async def test_refresh_token_success(self, client_v1: AsyncClient, sample_user_data: UserModel) -> None:
         """Test token refresh with valid refresh token."""
-        await self._register_user(client, sample_user_data)
-        login_response = await self._login_user(client, sample_user_data)
+        await self._register_user(client_v1, sample_user_data)
+        login_response = await self._login_user(client_v1, sample_user_data)
 
         refresh_token = login_response.json()["data"]["refresh_token"]
 
-        response = await client.post(
+        response = await client_v1.post(
             "/users/refresh",
             json=RefreshTokenRequest(refresh_token=refresh_token).model_dump(),
         )
@@ -115,9 +115,9 @@ class TestUserAPI:
         assert "refresh_token" in data
 
     @pytest.mark.asyncio
-    async def test_refresh_token_invalid(self, client: AsyncClient) -> None:
+    async def test_refresh_token_invalid(self, client_v1: AsyncClient) -> None:
         """Test refresh token failure with invalid token."""
-        response = await client.post(
+        response = await client_v1.post(
             "/users/refresh",
             json=RefreshTokenRequest(refresh_token="invalid.token.value").model_dump(),  # noqa: S106
         )

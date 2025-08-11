@@ -21,9 +21,9 @@ logger = logging.getLogger(__name__)
 class TestSyncAPI:
     """System tests for synchronization endpoints including bulk sync and status checking."""
 
-    async def _create_group(self, client: AsyncClient, auth_headers: dict, group_name: str = "Test Group") -> str:
+    async def _create_group(self, client_v1: AsyncClient, auth_headers: dict, group_name: str = "Test Group") -> str:
         """Create a group and return its ID."""
-        response = await client.post(
+        response = await client_v1.post(
             "/groups",
             headers=auth_headers,
             json=GroupCreateRequest(
@@ -42,13 +42,13 @@ class TestSyncAPI:
 
     async def _replace_placeholders_in_sync_data(
         self,
-        client: AsyncClient,
+        client_v1: AsyncClient,
         auth_headers: dict,
         sync_data: dict[str, Any],
     ) -> dict[str, Any]:
         """Replace placeholder values like <user_id> with actual values from the authenticated user."""
         # Get the user ID from the auth token
-        user_response = await client.get("/users/me", headers=auth_headers)
+        user_response = await client_v1.get("/users/me", headers=auth_headers)
         assert user_response.status_code == status.HTTP_200_OK
         user_id = user_response.json()["data"]["user"]["id"]
 
@@ -63,7 +63,7 @@ class TestSyncAPI:
 
     async def _wait_for_task_completion(
         self,
-        client: AsyncClient,
+        client_v1: AsyncClient,
         auth_headers: dict,
         operation_id: str,
         max_wait_seconds: int = 30,
@@ -71,7 +71,7 @@ class TestSyncAPI:
         """Wait for a sync task to complete and return the final status."""
         start_time = time.time()
         while time.time() - start_time < max_wait_seconds:
-            response = await client.get(f"/sync/status/{operation_id}", headers=auth_headers)
+            response = await client_v1.get(f"/sync/status/{operation_id}", headers=auth_headers)
             assert response.status_code == status.HTTP_200_OK
 
             status_data = response.json()["data"]
@@ -85,7 +85,7 @@ class TestSyncAPI:
         raise TimeoutError(msg)
 
     @pytest.mark.asyncio
-    async def test_bulk_sync_invalid_data(self, client: AsyncClient, auth_token_header: dict) -> None:
+    async def test_bulk_sync_invalid_data(self, client_v1: AsyncClient, auth_token_header: dict) -> None:
         """Test bulk sync with invalid data structure."""
         # Test with missing required fields
         invalid_data = {
@@ -98,7 +98,7 @@ class TestSyncAPI:
             ],
         }
 
-        response = await client.post(
+        response = await client_v1.post(
             "/sync/bulk",
             headers=auth_token_header,
             json=invalid_data,
@@ -107,16 +107,16 @@ class TestSyncAPI:
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
     @pytest.mark.asyncio
-    async def test_bulk_sync_healthy_data_1(self, client: AsyncClient, auth_token_header: dict) -> None:
+    async def test_bulk_sync_healthy_data_1(self, client_v1: AsyncClient, auth_token_header: dict) -> None:
         """Test bulk sync with healthy data set 1 - creates group and expenses, then updates and deletes."""
         # Load healthy sync data
         sync_data = await self._load_sync_data("sync_healthy_1.json")
 
         # Replace placeholders with actual user ID
-        sync_data = await self._replace_placeholders_in_sync_data(client, auth_token_header, sync_data)
+        sync_data = await self._replace_placeholders_in_sync_data(client_v1, auth_token_header, sync_data)
 
         # Start bulk sync operation
-        response = await client.post(
+        response = await client_v1.post(
             "/sync/bulk",
             headers=auth_token_header,
             json=sync_data,
@@ -128,7 +128,7 @@ class TestSyncAPI:
         operation_id = operation_data["operation_id"]
 
         # Wait for task completion
-        final_status = await self._wait_for_task_completion(client, auth_token_header, operation_id)
+        final_status = await self._wait_for_task_completion(client_v1, auth_token_header, operation_id)
 
         # Check that the task completed successfully
         assert final_status["status"] == "completed"
@@ -164,16 +164,16 @@ class TestSyncAPI:
         assert "deleted successfully" in expense_delete_notification
 
     @pytest.mark.asyncio
-    async def test_bulk_sync_healthy_data_2(self, client: AsyncClient, auth_token_header: dict) -> None:
+    async def test_bulk_sync_healthy_data_2(self, client_v1: AsyncClient, auth_token_header: dict) -> None:
         """Test bulk sync with healthy data set 2 - creates group and expenses, then updates group."""
         # Load healthy sync data
         sync_data = await self._load_sync_data("sync_healthy_2.json")
 
         # Replace placeholders with actual user ID
-        sync_data = await self._replace_placeholders_in_sync_data(client, auth_token_header, sync_data)
+        sync_data = await self._replace_placeholders_in_sync_data(client_v1, auth_token_header, sync_data)
 
         # Start bulk sync operation
-        response = await client.post(
+        response = await client_v1.post(
             "/sync/bulk",
             headers=auth_token_header,
             json=sync_data,
@@ -184,7 +184,7 @@ class TestSyncAPI:
         operation_id = operation_data["operation_id"]
 
         # Wait for task completion
-        final_status = await self._wait_for_task_completion(client, auth_token_header, operation_id)
+        final_status = await self._wait_for_task_completion(client_v1, auth_token_header, operation_id)
 
         # Check that the task completed successfully
         assert final_status["status"] == "completed"
@@ -197,16 +197,16 @@ class TestSyncAPI:
             assert "Success:" in notification
 
     @pytest.mark.asyncio
-    async def test_bulk_sync_unhealthy_data_1(self, client: AsyncClient, auth_token_header: dict) -> None:
+    async def test_bulk_sync_unhealthy_data_1(self, client_v1: AsyncClient, auth_token_header: dict) -> None:
         """Test bulk sync with unhealthy data set 1 - contains validation errors."""
         # Load unhealthy sync data
         sync_data = await self._load_sync_data("sync_unhealthy_1.json")
 
         # Replace placeholders with actual user ID
-        sync_data = await self._replace_placeholders_in_sync_data(client, auth_token_header, sync_data)
+        sync_data = await self._replace_placeholders_in_sync_data(client_v1, auth_token_header, sync_data)
 
         # Start bulk sync operation
-        response = await client.post(
+        response = await client_v1.post(
             "/sync/bulk",
             headers=auth_token_header,
             json=sync_data,
@@ -215,11 +215,11 @@ class TestSyncAPI:
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
     @pytest.mark.asyncio
-    async def test_sync_status_nonexistent_operation(self, client: AsyncClient, auth_token_header: dict) -> None:
+    async def test_sync_status_nonexistent_operation(self, client_v1: AsyncClient, auth_token_header: dict) -> None:
         """Test sync status check for non-existent operation."""
         fake_operation_id = str(uuid.uuid4())
 
-        response = await client.get(f"/sync/status/{fake_operation_id}", headers=auth_token_header)
+        response = await client_v1.get(f"/sync/status/{fake_operation_id}", headers=auth_token_header)
 
         assert response.status_code == status.HTTP_200_OK
         status_data = response.json()["data"]
@@ -229,16 +229,16 @@ class TestSyncAPI:
         assert status_data["status"] == "pending"
 
     @pytest.mark.asyncio
-    async def test_sync_status_during_processing(self, client: AsyncClient, auth_token_header: dict) -> None:
+    async def test_sync_status_during_processing(self, client_v1: AsyncClient, auth_token_header: dict) -> None:
         """Test sync status check during operation processing."""
         # Load sync data with multiple operations to ensure some processing time
         sync_data = await self._load_sync_data("sync_healthy_1.json")
 
         # Replace placeholders with actual user ID
-        sync_data = await self._replace_placeholders_in_sync_data(client, auth_token_header, sync_data)
+        sync_data = await self._replace_placeholders_in_sync_data(client_v1, auth_token_header, sync_data)
 
         # Start bulk sync operation
-        response = await client.post(
+        response = await client_v1.post(
             "/sync/bulk",
             headers=auth_token_header,
             json=sync_data,
@@ -248,7 +248,7 @@ class TestSyncAPI:
         operation_id = response.json()["data"]["operation_id"]
 
         # Check status immediately - might catch it in processing state
-        response = await client.get(f"/sync/status/{operation_id}", headers=auth_token_header)
+        response = await client_v1.get(f"/sync/status/{operation_id}", headers=auth_token_header)
 
         assert response.status_code == status.HTTP_200_OK
         status_data = response.json()["data"]
@@ -257,13 +257,13 @@ class TestSyncAPI:
         assert isinstance(status_data["notifications"], list)
 
     @pytest.mark.asyncio
-    async def test_sync_operations_with_existing_group(self, client: AsyncClient, auth_token_header: dict) -> None:
+    async def test_sync_operations_with_existing_group(self, client_v1: AsyncClient, auth_token_header: dict) -> None:
         """Test sync operations that reference existing groups."""
         # First create a group through regular API
-        group_id = await self._create_group(client, auth_token_header, "Pre-existing Group")
+        group_id = await self._create_group(client_v1, auth_token_header, "Pre-existing Group")
 
         # get the user id by users/me
-        user_response = await client.get("/users/me", headers=auth_token_header)
+        user_response = await client_v1.get("/users/me", headers=auth_token_header)
         assert user_response.status_code == status.HTTP_200_OK
         user_id = user_response.json()["data"]["user"]["id"]
 
@@ -290,7 +290,7 @@ class TestSyncAPI:
         }
 
         # Start bulk sync operation
-        response = await client.post(
+        response = await client_v1.post(
             "/sync/bulk",
             headers=auth_token_header,
             json=sync_data,
@@ -300,7 +300,7 @@ class TestSyncAPI:
         operation_id = response.json()["data"]["operation_id"]
 
         # Wait for completion
-        final_status = await self._wait_for_task_completion(client, auth_token_header, operation_id)
+        final_status = await self._wait_for_task_completion(client_v1, auth_token_header, operation_id)
 
         # Should succeed since group exists
         assert final_status["status"] == "completed"
@@ -308,7 +308,9 @@ class TestSyncAPI:
         assert "Success: Expense" in final_status["notifications"][0]
 
     @pytest.mark.asyncio
-    async def test_sync_operations_with_nonexistent_group(self, client: AsyncClient, auth_token_header: dict) -> None:
+    async def test_sync_operations_with_nonexistent_group(
+        self, client_v1: AsyncClient, auth_token_header: dict,
+    ) -> None:
         """Test sync operations that reference non-existent groups."""
         fake_group_id = str(uuid.uuid4())
 
@@ -335,7 +337,7 @@ class TestSyncAPI:
         }
 
         # Start bulk sync operation
-        response = await client.post(
+        response = await client_v1.post(
             "/sync/bulk",
             headers=auth_token_header,
             json=sync_data,
@@ -345,7 +347,7 @@ class TestSyncAPI:
         operation_id = response.json()["data"]["operation_id"]
 
         # Wait for completion
-        final_status = await self._wait_for_task_completion(client, auth_token_header, operation_id)
+        final_status = await self._wait_for_task_completion(client_v1, auth_token_header, operation_id)
 
         # Should fail since group doesn't exist
         assert final_status["status"] == "completed"
@@ -354,7 +356,7 @@ class TestSyncAPI:
         assert "not found or not accessible" in final_status["notifications"][0]
 
     @pytest.mark.asyncio
-    async def test_sync_delete_nonexistent_entities(self, client: AsyncClient, auth_token_header: dict) -> None:
+    async def test_sync_delete_nonexistent_entities(self, client_v1: AsyncClient, auth_token_header: dict) -> None:
         """Test sync delete operations on non-existent entities."""
         fake_expense_id = str(uuid.uuid4())
         fake_group_id = str(uuid.uuid4())
@@ -373,7 +375,7 @@ class TestSyncAPI:
         }
 
         # Start bulk sync operation
-        response = await client.post(
+        response = await client_v1.post(
             "/sync/bulk",
             headers=auth_token_header,
             json=sync_data,
@@ -383,7 +385,7 @@ class TestSyncAPI:
         operation_id = response.json()["data"]["operation_id"]
 
         # Wait for completion
-        final_status = await self._wait_for_task_completion(client, auth_token_header, operation_id)
+        final_status = await self._wait_for_task_completion(client_v1, auth_token_header, operation_id)
 
         # Should complete but with failure notifications
         assert final_status["status"] == "completed"
@@ -395,7 +397,7 @@ class TestSyncAPI:
             assert "could not be found or might be deleted before" in notification
 
     @pytest.mark.asyncio
-    async def test_sync_update_nonexistent_entities(self, client: AsyncClient, auth_token_header: dict) -> None:
+    async def test_sync_update_nonexistent_entities(self, client_v1: AsyncClient, auth_token_header: dict) -> None:
         """Test sync update operations on non-existent entities."""
         fake_expense_id = str(uuid.uuid4())
         fake_group_id = str(uuid.uuid4())
@@ -429,7 +431,7 @@ class TestSyncAPI:
         }
 
         # Start bulk sync operation
-        response = await client.post(
+        response = await client_v1.post(
             "/sync/bulk",
             headers=auth_token_header,
             json=sync_data,
@@ -439,7 +441,7 @@ class TestSyncAPI:
         operation_id = response.json()["data"]["operation_id"]
 
         # Wait for completion
-        final_status = await self._wait_for_task_completion(client, auth_token_header, operation_id)
+        final_status = await self._wait_for_task_completion(client_v1, auth_token_header, operation_id)
 
         # Should complete but with failure notifications
         assert final_status["status"] == "completed"
@@ -450,14 +452,14 @@ class TestSyncAPI:
             assert "Failed:" in notification
 
     @pytest.mark.asyncio
-    async def test_sync_mixed_operations(self, client: AsyncClient, auth_token_header: dict) -> None:
+    async def test_sync_mixed_operations(self, client_v1: AsyncClient, auth_token_header: dict) -> None:
         """Test sync with mixed successful and failed operations."""
         # Create a group first for some operations to succeed
-        group_id = await self._create_group(client, auth_token_header, "Mixed Test Group")
+        group_id = await self._create_group(client_v1, auth_token_header, "Mixed Test Group")
         fake_expense_id = str(uuid.uuid4())
 
         # get the user id by users/me
-        user_response = await client.get("/users/me", headers=auth_token_header)
+        user_response = await client_v1.get("/users/me", headers=auth_token_header)
         assert user_response.status_code == status.HTTP_200_OK
         user_id = user_response.json()["data"]["user"]["id"]
 
@@ -490,7 +492,7 @@ class TestSyncAPI:
         }
 
         # Start bulk sync operation
-        response = await client.post(
+        response = await client_v1.post(
             "/sync/bulk",
             headers=auth_token_header,
             json=sync_data,
@@ -500,7 +502,7 @@ class TestSyncAPI:
         operation_id = response.json()["data"]["operation_id"]
 
         # Wait for completion
-        final_status = await self._wait_for_task_completion(client, auth_token_header, operation_id)
+        final_status = await self._wait_for_task_completion(client_v1, auth_token_header, operation_id)
 
         # Should complete with mixed results
         assert final_status["status"] == "completed"
@@ -511,12 +513,12 @@ class TestSyncAPI:
         assert "Failed:" in final_status["notifications"][1]
 
     @pytest.mark.asyncio
-    async def test_sync_empty_changes_list(self, client: AsyncClient, auth_token_header: dict) -> None:
+    async def test_sync_empty_changes_list(self, client_v1: AsyncClient, auth_token_header: dict) -> None:
         """Test sync with empty changes list."""
         sync_data: dict[str, list] = {"changes": []}
 
         # Start bulk sync operation
-        response = await client.post(
+        response = await client_v1.post(
             "/sync/bulk",
             headers=auth_token_header,
             json=sync_data,
@@ -526,20 +528,20 @@ class TestSyncAPI:
         operation_id = response.json()["data"]["operation_id"]
 
         # Wait for completion
-        final_status = await self._wait_for_task_completion(client, auth_token_header, operation_id)
+        final_status = await self._wait_for_task_completion(client_v1, auth_token_header, operation_id)
 
         # Should complete successfully with no notifications
         assert final_status["status"] == "completed"
         assert len(final_status["notifications"]) == 0
 
     @pytest.mark.asyncio
-    async def test_sync_timestamp_validation(self, client: AsyncClient, auth_token_header: dict) -> None:
+    async def test_sync_timestamp_validation(self, client_v1: AsyncClient, auth_token_header: dict) -> None:
         """Test sync operations with various timestamp formats."""
         # Create a group and expense first for update operations
-        group_id = await self._create_group(client, auth_token_header, "Timestamp Test Group")
+        group_id = await self._create_group(client_v1, auth_token_header, "Timestamp Test Group")
 
         # get the user id by users/me
-        user_response = await client.get("/users/me", headers=auth_token_header)
+        user_response = await client_v1.get("/users/me", headers=auth_token_header)
         assert user_response.status_code == status.HTTP_200_OK
         user_id = user_response.json()["data"]["user"]["id"]
 
@@ -554,7 +556,7 @@ class TestSyncAPI:
             "participants_id": [],
         }
 
-        expense_response = await client.post(
+        expense_response = await client_v1.post(
             f"/groups/{group_id}/expenses",
             headers=auth_token_header,
             json=expense_data,
@@ -583,7 +585,7 @@ class TestSyncAPI:
             ],
         }
 
-        response = await client.post(
+        response = await client_v1.post(
             "/sync/bulk",
             headers=auth_token_header,
             json=sync_data,
@@ -593,7 +595,7 @@ class TestSyncAPI:
         operation_id = response.json()["data"]["operation_id"]
 
         # Wait for completion
-        final_status = await self._wait_for_task_completion(client, auth_token_header, operation_id)
+        final_status = await self._wait_for_task_completion(client_v1, auth_token_header, operation_id)
 
         # Should complete but discard the update due to old timestamp
         assert final_status["status"] == "completed"
