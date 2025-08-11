@@ -62,12 +62,12 @@ def sample_group_data() -> GroupModel:
 
 
 @pytest_asyncio.fixture()
-async def auth_token_header(client: AsyncClient, sample_user_data: UserModel) -> dict[str, str]:
+async def auth_token_header(client_v1: AsyncClient, sample_user_data: UserModel) -> dict[str, str]:
     """Return the authorization header with the current token.
 
     It registers a sample user(from the sample_user_data fixture) and returns the token in the header.
     """
-    response: Response = await client.post(
+    response: Response = await client_v1.post(
         "/users/register",
         json=UserCreateRequest(
             email=sample_user_data.email,
