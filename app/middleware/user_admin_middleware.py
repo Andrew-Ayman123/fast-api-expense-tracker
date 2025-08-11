@@ -10,7 +10,7 @@ from fastapi import Depends
 
 from app.dependencies.services_dependencies import get_group_service
 from app.exceptions.application_exception import ApplicationError
-from app.middleware.jwt_auth_middleware import get_current_user_id
+from app.middleware.middleware_dependencies import get_current_user_id
 from app.services.group_service import GroupService
 from app.utils.create_exception_util import create_http_exception
 

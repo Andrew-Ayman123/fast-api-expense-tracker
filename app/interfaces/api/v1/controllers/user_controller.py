@@ -5,9 +5,9 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
-from app.dependencies.services_dependencies import get_jwt_service, get_user_service
+from app.dependencies.services_dependencies import get_auth_service, get_user_service
 from app.exceptions.application_exception import ApplicationError
-from app.middleware.jwt_auth_middleware import get_current_user_id
+from app.middleware.middleware_dependencies import get_current_user_id
 from app.models import UserModel
 from app.schemas.user_schema import (
     RefreshTokenRequest,
@@ -22,7 +22,7 @@ from app.schemas.user_schema import (
     UserRegisterResponse,
     UserWithTokensData,
 )
-from app.services.jwt_service import JWTService
+from app.services.abstraction.auth_service_abstraction import AuthService
 from app.services.user_service import UserService
 from app.utils.create_exception_util import create_http_exception
 from app.utils.logger_util import get_logger
@@ -40,14 +40,14 @@ def _convert_user_to_data(user: UserModel) -> UserData:
 async def register_user(
     user_data: UserCreateRequest,
     user_service: Annotated[UserService, Depends(get_user_service)],
-    jwt_service: Annotated[JWTService, Depends(get_jwt_service)],
+    auth_service: Annotated[AuthService, Depends(get_auth_service)],
 ) -> UserRegisterResponse:
     """Register a new user and return user data with JWT tokens.
 
     Args:
         user_data (UserCreateRequest): The data for creating a new user.
         user_service (UserService): The user service instance.
-        jwt_service (JWTService): The JWT service instance.
+        auth_service (auth_service): The auth service instance.
 
     Returns:
         UserRegisterResponse: The user response with JWT tokens wrapped in data field.
@@ -59,8 +59,8 @@ async def register_user(
     """
     try:
         user = await user_service.create_user(user_data)
-        token = jwt_service.generate_token(user.id)
-        refresh_token = jwt_service.generate_refresh_token(user.id)
+        token = auth_service.generate_token(user.id)
+        refresh_token = auth_service.generate_refresh_token(user.id)
 
         user_data_obj = _convert_user_to_data(user)
         user_with_tokens = UserWithTokensData(user=user_data_obj, token=token, refresh_token=refresh_token)
@@ -81,14 +81,14 @@ async def register_user(
 async def login_user(
     login_data: UserLoginRequest,
     user_service: Annotated[UserService, Depends(get_user_service)],
-    jwt_service: Annotated[JWTService, Depends(get_jwt_service)],
+    auth_service: Annotated[AuthService, Depends(get_auth_service)],
 ) -> UserLoginResponse:
     """Login a user and return user data with JWT tokens.
 
     Args:
         login_data (UserLoginRequest): The login data containing email and password.
         user_service (UserService): The user service instance.
-        jwt_service (JWTService): The JWT service instance.
+        auth_service (auth_service): The auth service instance.
 
     Returns:
         UserLoginResponse: The user response with JWT tokens wrapped in data field.
@@ -100,8 +100,8 @@ async def login_user(
     """
     try:
         user = await user_service.verify_user_exists(login_data)
-        token = jwt_service.generate_token(user.id)
-        refresh_token = jwt_service.generate_refresh_token(user.id)
+        token = auth_service.generate_token(user.id)
+        refresh_token = auth_service.generate_refresh_token(user.id)
 
         user_data_obj = _convert_user_to_data(user)
         user_with_tokens = UserWithTokensData(user=user_data_obj, token=token, refresh_token=refresh_token)
@@ -158,14 +158,14 @@ async def get_user_by_id(
 async def refresh_token(
     refresh_data: RefreshTokenRequest,
     user_service: Annotated[UserService, Depends(get_user_service)],
-    jwt_service: Annotated[JWTService, Depends(get_jwt_service)],
+    auth_service: Annotated[AuthService, Depends(get_auth_service)],
 ) -> TokenRefreshResponse:
-    """Refresh JWT tokens using a valid refresh token.
+    """Refresh tokens using a valid refresh token.
 
     Args:
         refresh_data (RefreshTokenRequest): The refresh token data.
         user_service (UserService): The user service instance.
-        jwt_service (JWTService): The JWT service instance.
+        auth_service (auth_service): The auth service instance.
 
     Returns:
         TokenRefreshResponse: New JWT tokens wrapped in data field.
@@ -178,14 +178,14 @@ async def refresh_token(
     """
     try:
         # Decode the refresh token to get user ID
-        user_id = jwt_service.decode_refresh_token_user_id(refresh_data.refresh_token)
+        user_id = auth_service.decode_refresh_token_user_id(refresh_data.refresh_token)
 
         # Verify user still exists
         user = await user_service.get_user_by_id(user_id)
 
         # Generate new tokens
-        new_token = jwt_service.generate_token(user.id)
-        new_refresh_token = jwt_service.generate_refresh_token(user.id)
+        new_token = auth_service.generate_token(user.id)
+        new_refresh_token = auth_service.generate_refresh_token(user.id)
 
         token_data = TokenRefreshData(token=new_token, refresh_token=new_refresh_token)
 

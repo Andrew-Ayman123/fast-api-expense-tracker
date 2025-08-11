@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from app.dependencies.celery_dependencies import get_sync_service
-from app.dependencies.services_dependencies import get_jwt_service
+from app.dependencies.services_dependencies import get_auth_service
 from app.schemas.sync_schema import SyncBulkRequest
 from app.utils.logger_util import get_logger
 
@@ -47,7 +47,7 @@ async def websocket_bulk_sync(websocket: WebSocket) -> None:  # pragma: no cover
             return
 
         try:
-            current_user_id = get_jwt_service().decode_token_user_id(token)
+            current_user_id = get_auth_service().decode_token_user_id(token)
         except Exception as e:  # noqa: BLE001
             await websocket.send_json(
                 {

@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends
 
 from app.dependencies.celery_dependencies import get_celery
 from app.exceptions.application_exception import ApplicationError
-from app.middleware.jwt_auth_middleware import get_current_user_id
+from app.middleware.middleware_dependencies import get_current_user_id
 from app.schemas.sync_schema import (
     SyncBulkRequest,
     SyncBulkResponse,
