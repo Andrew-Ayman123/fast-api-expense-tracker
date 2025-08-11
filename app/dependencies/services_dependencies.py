@@ -7,6 +7,7 @@ from typing import Annotated
 
 from fastapi import Depends
 
+from app.config.environment import Settings
 from app.dependencies.repos_dependencies import (
     get_expense_participant_repository,
     get_expense_repository,
@@ -78,6 +79,15 @@ def get_expense_service(
     )
 
 
+def _get_jwt_service(settings: Settings) -> JWTService:
+    """Create and return a JWTService instance from the given settings."""
+    return JWTService(
+        secret_key=settings.jwt_secret_key,
+        algorithm=settings.jwt_algorithm,
+        expiration_minutes=settings.jwt_expiration_minutes,
+    )
+
+
 # It's ok to cache JWTService because it is stateless and does not hold any mutable state
 @lru_cache
 def get_auth_service() -> AuthService:
@@ -90,11 +100,7 @@ def get_auth_service() -> AuthService:
     settings = get_env_settings()
     auth_mode = settings.AUTH_MODE
     if auth_mode == "JWT":
-        return JWTService(
-            secret_key=settings.jwt_secret_key,
-            algorithm=settings.jwt_algorithm,
-            expiration_minutes=settings.jwt_expiration_minutes,
-        )
+        return _get_jwt_service(settings)
     msg = f"Unsupported auth mode: {auth_mode}"
     raise ValueError(msg)
 
