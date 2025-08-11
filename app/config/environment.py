@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     server_reload: bool = get_env_bool("SERVER_RELOAD")
     server_log_level: str = get_env("SERVER_LOG_LEVEL")
 
-    AUTH_MODE: str = get_env("AUTH_MODE")  # Add this line
+    AUTH_MODE: str = get_env("AUTH_MODE")
 
     jwt_secret_key: str = get_env("JWT_SECRET_KEY")
     jwt_algorithm: str = get_env("JWT_ALGORITHM")

@@ -5,9 +5,9 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
-from app.dependencies.middleware_dependencies import get_current_user_id
 from app.dependencies.services_dependencies import get_auth_service, get_user_service
 from app.exceptions.application_exception import ApplicationError
+from app.middleware.middleware_dependencies import get_current_user_id
 from app.models import UserModel
 from app.schemas.user_schema import (
     RefreshTokenRequest,
