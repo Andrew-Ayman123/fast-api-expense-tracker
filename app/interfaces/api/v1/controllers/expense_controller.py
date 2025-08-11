@@ -5,9 +5,9 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 
+from app.dependencies.middleware_dependencies import get_current_user_id
 from app.dependencies.services_dependencies import get_expense_service
 from app.exceptions.application_exception import ApplicationError
-from app.middleware.jwt_auth_middleware import get_current_user_id
 from app.middleware.user_admin_middleware import verify_user_admin_role
 from app.schemas.expense_schema import (
     ExpenseCreateData,

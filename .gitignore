@@ -17,6 +17,6 @@ __pycache__    # Python bytecode cache
 build/
 fast_api_test_expense-tracker.egg-info/
 fast_api_test_todo.egg-info
-
+fast_api_expense_tracker.egg-info
 temp/
 bin/

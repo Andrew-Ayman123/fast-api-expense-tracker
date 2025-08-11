@@ -12,9 +12,10 @@ from app.exceptions.jwt_exception import (
     JWTTokenInvalidError,
     JWTTokenMissingUserIDError,
 )
+from app.services.abstraction.auth_service_abstraction import AuthService
 
 
-class JWTService:
+class JWTService (AuthService):
     """Service for handling JWT token generation and decoding."""
 
     def __init__(self, secret_key: str, algorithm: str = "HS256", expiration_minutes: int = 60) -> None:
