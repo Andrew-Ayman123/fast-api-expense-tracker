@@ -16,9 +16,9 @@ logger = logging.getLogger(__name__)
 class TestBalanceAPI:
     """System tests for user balance retrieval."""
 
-    async def _create_group(self, client: AsyncClient, auth_headers: dict, group_name: str = "Test Group") -> str:
+    async def _create_group(self, client_v1: AsyncClient, auth_headers: dict, group_name: str = "Test Group") -> str:
         """Create a group and return its ID."""
-        response = await client.post(
+        response = await client_v1.post(
             "/groups",
             headers=auth_headers,
             json=GroupCreateRequest(
@@ -32,18 +32,18 @@ class TestBalanceAPI:
     @pytest.mark.asyncio
     async def test_get_user_balance_success(
         self,
-        client: AsyncClient,
+        client_v1: AsyncClient,
         auth_token_header: dict,
     ) -> None:
         """Test successful user balance retrieval."""
         # Create a group first
-        group_id = await self._create_group(client, auth_token_header)
+        group_id = await self._create_group(client_v1, auth_token_header)
 
         # Get the user ID from the auth token
-        user_response = await client.get("/users/me", headers=auth_token_header)
+        user_response = await client_v1.get("/users/me", headers=auth_token_header)
         user_id = user_response.json()["data"]["user"]["id"]
 
-        response = await client.get(
+        response = await client_v1.get(
             f"/groups/{group_id}/members/{user_id}/balance",
             headers=auth_token_header,
         )
@@ -59,26 +59,26 @@ class TestBalanceAPI:
         assert isinstance(json_data["data"]["expenses"], dict)
 
     @pytest.mark.asyncio
-    async def test_get_user_balance_unauthorized(self, client: AsyncClient) -> None:
+    async def test_get_user_balance_unauthorized(self, client_v1: AsyncClient) -> None:
         """Test user balance retrieval without authentication."""
         fake_group_id = str(uuid.uuid4())
         fake_user_id = str(uuid.uuid4())
 
-        response = await client.get(f"/groups/{fake_group_id}/members/{fake_user_id}/balance")
+        response = await client_v1.get(f"/groups/{fake_group_id}/members/{fake_user_id}/balance")
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
     @pytest.mark.asyncio
     async def test_get_user_balance_invalid_group(
         self,
-        client: AsyncClient,
+        client_v1: AsyncClient,
         auth_token_header: dict,
     ) -> None:
         """Test user balance retrieval with invalid group ID."""
         fake_group_id = str(uuid.uuid4())
-        user_response = await client.get("/users/me", headers=auth_token_header)
+        user_response = await client_v1.get("/users/me", headers=auth_token_header)
         user_id = user_response.json()["data"]["user"]["id"]
 
-        response = await client.get(
+        response = await client_v1.get(
             f"/groups/{fake_group_id}/members/{user_id}/balance",
             headers=auth_token_header,
         )
@@ -88,14 +88,14 @@ class TestBalanceAPI:
     @pytest.mark.asyncio
     async def test_get_user_balance_invalid_user(
         self,
-        client: AsyncClient,
+        client_v1: AsyncClient,
         auth_token_header: dict,
     ) -> None:
         """Test user balance retrieval with invalid user ID."""
-        group_id = await self._create_group(client, auth_token_header)
+        group_id = await self._create_group(client_v1, auth_token_header)
         fake_user_id = str(uuid.uuid4())
 
-        response = await client.get(
+        response = await client_v1.get(
             f"/groups/{group_id}/members/{fake_user_id}/balance",
             headers=auth_token_header,
         )
@@ -105,12 +105,12 @@ class TestBalanceAPI:
     @pytest.mark.asyncio
     async def test_get_user_balance_not_group_member(
         self,
-        client: AsyncClient,
+        client_v1: AsyncClient,
         auth_token_header: dict,
     ) -> None:
         """Test user balance retrieval for user not in group."""
         # Create group
-        group_id = await self._create_group(client, auth_token_header)
+        group_id = await self._create_group(client_v1, auth_token_header)
 
         # Register another user
         other_user_data = {
@@ -118,7 +118,7 @@ class TestBalanceAPI:
             "username": "Other User",
             "password": "password123",
         }
-        register_response = await client.post(
+        register_response = await client_v1.post(
             "/users/register",
             json=other_user_data,
         )
@@ -126,7 +126,7 @@ class TestBalanceAPI:
         other_user_id = register_response.json()["data"]["user"]["id"]
 
         # Try to get balance for user not in group
-        response = await client.get(
+        response = await client_v1.get(
             f"/groups/{group_id}/members/{other_user_id}/balance",
             headers=auth_token_header,
         )
@@ -136,15 +136,15 @@ class TestBalanceAPI:
     @pytest.mark.asyncio
     async def test_get_user_balance_with_multiple_expenses(  # noqa: PLR0915
         self,
-        client: AsyncClient,
+        client_v1: AsyncClient,
         auth_token_header: dict,
     ) -> None:
         """Test user balance calculation with multiple expenses and different participants."""
         # Create group
-        group_id = await self._create_group(client, auth_token_header)
+        group_id = await self._create_group(client_v1, auth_token_header)
 
         # Get the first user (admin) ID
-        user_response = await client.get("/users/me", headers=auth_token_header)
+        user_response = await client_v1.get("/users/me", headers=auth_token_header)
         admin_user_id = user_response.json()["data"]["user"]["id"]
 
         # Register second user
@@ -153,7 +153,7 @@ class TestBalanceAPI:
             "username": "User Two",
             "password": "password123",
         }
-        register_response2 = await client.post("/users/register", json=user2_data)
+        register_response2 = await client_v1.post("/users/register", json=user2_data)
         assert register_response2.status_code == status.HTTP_200_OK
         user2_id = register_response2.json()["data"]["user"]["id"]
 
@@ -163,19 +163,19 @@ class TestBalanceAPI:
             "username": "User Three",
             "password": "password123",
         }
-        register_response3 = await client.post("/users/register", json=user3_data)
+        register_response3 = await client_v1.post("/users/register", json=user3_data)
         assert register_response3.status_code == status.HTTP_200_OK
         user3_id = register_response3.json()["data"]["user"]["id"]
 
         # Add second and third users to the group (admin required)
-        add_member2_response = await client.post(
+        add_member2_response = await client_v1.post(
             f"/groups/{group_id}/members",
             headers=auth_token_header,
             json={"email": user2_data["email"], "role": "Member"},
         )
         assert add_member2_response.status_code == status.HTTP_200_OK
 
-        add_member3_response = await client.post(
+        add_member3_response = await client_v1.post(
             f"/groups/{group_id}/members",
             headers=auth_token_header,
             json={"email": user3_data["email"], "role": "Member"},
@@ -192,7 +192,7 @@ class TestBalanceAPI:
             "is_payer_included": True,
             "participants_id": [admin_user_id, user2_id, user3_id],
         }
-        expense1_response = await client.post(
+        expense1_response = await client_v1.post(
             f"/groups/{group_id}/expenses",
             headers=auth_token_header,
             json=expense1_data,
@@ -210,7 +210,7 @@ class TestBalanceAPI:
             "is_payer_included": True,
             "participants_id": [user2_id, user3_id],
         }
-        expense2_response = await client.post(
+        expense2_response = await client_v1.post(
             f"/groups/{group_id}/expenses",
             headers=auth_token_header,
             json=expense2_data,
@@ -228,7 +228,7 @@ class TestBalanceAPI:
             "is_payer_included": True,
             "participants_id": [admin_user_id, user2_id, user3_id],
         }
-        expense3_response = await client.post(
+        expense3_response = await client_v1.post(
             f"/groups/{group_id}/expenses",
             headers=auth_token_header,
             json=expense3_data,
@@ -239,7 +239,7 @@ class TestBalanceAPI:
         # Test Admin User balance
         # Admin paid: $300, owes: $100 (expense1) + $30 (expense3) = $130
         # Net balance: $300 - $130 = $170 (Admin should receive $170)
-        admin_balance_response = await client.get(
+        admin_balance_response = await client_v1.get(
             f"/groups/{group_id}/members/{admin_user_id}/balance",
             headers=auth_token_header,
         )
@@ -254,7 +254,7 @@ class TestBalanceAPI:
         # Test User2 balance
         # User2 paid: $150, owes: $100 (expense1) + $30 (expense3) = $130
         # Net balance: $150 - $130 - $75 = $-55 (User2 should receive $20)
-        user2_balance_response = await client.get(
+        user2_balance_response = await client_v1.get(
             f"/groups/{group_id}/members/{user2_id}/balance",
             headers=auth_token_header,
         )
@@ -270,7 +270,7 @@ class TestBalanceAPI:
         # Test User3 balance
         # User3 paid: $90, owes: $100 (expense1) + $75 (expense2) = $175
         # Net balance: $90 - $175 - 30 = -$115 (User3 owes $115)
-        user3_balance_response = await client.get(
+        user3_balance_response = await client_v1.get(
             f"/groups/{group_id}/members/{user3_id}/balance",
             headers=auth_token_header,
         )

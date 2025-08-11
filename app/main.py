@@ -14,6 +14,7 @@ from app.interfaces.api.v1.controllers.group_controller import router as group_r
 from app.interfaces.api.v1.controllers.health_check_controller import router as health_routes
 from app.interfaces.api.v1.controllers.sync_controller import router as sync_controller
 from app.interfaces.api.v1.controllers.user_controller import router as user_router
+from app.interfaces.api.v2.controllers.sync_controller import router as sync_controller_v2
 
 app = FastAPI(
     title=get_env_settings().app_name,
@@ -32,6 +33,10 @@ app.add_middleware(
     allow_headers=get_env_settings().allowed_headers,
 )
 
+# Include routers for version 2
+app.include_router(sync_controller_v2, prefix="/api/v2")
+
+# Include routers for version 1
 app.include_router(sync_controller, prefix="/api/v1")
 app.include_router(health_routes, prefix="/api/v1")
 app.include_router(user_router, prefix="/api/v1")

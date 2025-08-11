@@ -17,9 +17,9 @@ logger = logging.getLogger(__name__)
 class TestExpenseAPI:
     """System tests for expense creation, listing, detail, update, and deletion."""
 
-    async def _create_group(self, client: AsyncClient, auth_headers: dict, group_name: str = "Test Group") -> str:
+    async def _create_group(self, client_v1: AsyncClient, auth_headers: dict, group_name: str = "Test Group") -> str:
         """Create a group and return its ID."""
-        response = await client.post(
+        response = await client_v1.post(
             "/groups",
             headers=auth_headers,
             json=GroupCreateRequest(
@@ -32,13 +32,13 @@ class TestExpenseAPI:
 
     async def _create_expense(
         self,
-        client: AsyncClient,
+        client_v1: AsyncClient,
         auth_headers: dict,
         group_id: str,
         expense_data: dict,
     ) -> Response:
         """Create an expense using the API."""
-        return await client.post(
+        return await client_v1.post(
             f"/groups/{group_id}/expenses",
             headers=auth_headers,
             json=expense_data,
@@ -46,14 +46,14 @@ class TestExpenseAPI:
 
     async def _update_expense(
         self,
-        client: AsyncClient,
+        client_v1: AsyncClient,
         auth_headers: dict,
         group_id: str,
         expense_id: str,
         expense_data: dict,
     ) -> Response:
         """Update an expense using the API."""
-        return await client.put(
+        return await client_v1.put(
             f"/groups/{group_id}/expenses/{expense_id}",
             headers=auth_headers,
             json=expense_data,
@@ -62,15 +62,15 @@ class TestExpenseAPI:
     @pytest.mark.asyncio
     async def test_create_expense_success(
         self,
-        client: AsyncClient,
+        client_v1: AsyncClient,
         auth_token_header: dict,
     ) -> None:
         """Test successful expense creation."""
         # Create a group first
-        group_id = await self._create_group(client, auth_token_header)
+        group_id = await self._create_group(client_v1, auth_token_header)
 
         # Get the user ID from the auth token
-        user_response = await client.get("/users/me", headers=auth_token_header)
+        user_response = await client_v1.get("/users/me", headers=auth_token_header)
         user_id = user_response.json()["data"]["user"]["id"]
 
         expense_data = {
@@ -83,7 +83,7 @@ class TestExpenseAPI:
             "participants_id": [user_id],
         }
 
-        response = await self._create_expense(client, auth_token_header, group_id, expense_data)
+        response = await self._create_expense(client_v1, auth_token_header, group_id, expense_data)
 
         assert response.status_code == status.HTTP_200_OK, response.json()
         json_data = response.json()
@@ -99,7 +99,7 @@ class TestExpenseAPI:
         assert len(expense["participants"]) == 1
 
     @pytest.mark.asyncio
-    async def test_create_expense_unauthorized(self, client: AsyncClient) -> None:
+    async def test_create_expense_unauthorized(self, client_v1: AsyncClient) -> None:
         """Test expense creation without authentication."""
         fake_group_id = str(uuid.uuid4())
         fake_user_id = str(uuid.uuid4())
@@ -114,18 +114,18 @@ class TestExpenseAPI:
             "participants_id": [fake_user_id],
         }
 
-        response = await client.post(f"/groups/{fake_group_id}/expenses", json=expense_data)
+        response = await client_v1.post(f"/groups/{fake_group_id}/expenses", json=expense_data)
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
     @pytest.mark.asyncio
     async def test_create_expense_invalid_group(
         self,
-        client: AsyncClient,
+        client_v1: AsyncClient,
         auth_token_header: dict,
     ) -> None:
         """Test expense creation with invalid group ID."""
         fake_group_id = str(uuid.uuid4())
-        user_response = await client.get("/users/me", headers=auth_token_header)
+        user_response = await client_v1.get("/users/me", headers=auth_token_header)
         user_id = user_response.json()["data"]["user"]["id"]
 
         expense_data = {
@@ -138,17 +138,17 @@ class TestExpenseAPI:
             "participants_id": [user_id],
         }
 
-        response = await self._create_expense(client, auth_token_header, fake_group_id, expense_data)
+        response = await self._create_expense(client_v1, auth_token_header, fake_group_id, expense_data)
         assert response.status_code == status.HTTP_404_NOT_FOUND, response.json()
 
     @pytest.mark.asyncio
     async def test_create_expense_invalid_data(
         self,
-        client: AsyncClient,
+        client_v1: AsyncClient,
         auth_token_header: dict,
     ) -> None:
         """Test expense creation with invalid data."""
-        group_id = await self._create_group(client, auth_token_header)
+        group_id = await self._create_group(client_v1, auth_token_header)
 
         # Test with invalid amount
         expense_data = {
@@ -161,18 +161,18 @@ class TestExpenseAPI:
             "participants_id": [str(uuid.uuid4())],
         }
 
-        response = await self._create_expense(client, auth_token_header, group_id, expense_data)
+        response = await self._create_expense(client_v1, auth_token_header, group_id, expense_data)
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
     @pytest.mark.asyncio
     async def test_create_expense_empty_participants_error(
         self,
-        client: AsyncClient,
+        client_v1: AsyncClient,
         auth_token_header: dict,
     ) -> None:
         """Test expense creation with empty participants list should return error."""
-        group_id = await self._create_group(client, auth_token_header)
-        user_response = await client.get("/users/me", headers=auth_token_header)
+        group_id = await self._create_group(client_v1, auth_token_header)
+        user_response = await client_v1.get("/users/me", headers=auth_token_header)
         user_id = user_response.json()["data"]["user"]["id"]
 
         expense_data = {
@@ -185,18 +185,18 @@ class TestExpenseAPI:
             "participants_id": [],  # Empty participants list
         }
 
-        response = await self._create_expense(client, auth_token_header, group_id, expense_data)
+        response = await self._create_expense(client_v1, auth_token_header, group_id, expense_data)
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, response.json()
 
     @pytest.mark.asyncio
     async def test_create_expense_empty_participants_with_payer_included(
         self,
-        client: AsyncClient,
+        client_v1: AsyncClient,
         auth_token_header: dict,
     ) -> None:
         """Test expense creation with empty participants list but payer is included."""
-        group_id = await self._create_group(client, auth_token_header)
-        user_response = await client.get("/users/me", headers=auth_token_header)
+        group_id = await self._create_group(client_v1, auth_token_header)
+        user_response = await client_v1.get("/users/me", headers=auth_token_header)
         user_id = user_response.json()["data"]["user"]["id"]
 
         expense_data = {
@@ -209,7 +209,7 @@ class TestExpenseAPI:
             "participants_id": [],  # Empty participants list
         }
 
-        response = await self._create_expense(client, auth_token_header, group_id, expense_data)
+        response = await self._create_expense(client_v1, auth_token_header, group_id, expense_data)
 
         assert response.status_code == status.HTTP_200_OK, response.json()
         json_data = response.json()
@@ -228,12 +228,12 @@ class TestExpenseAPI:
     @pytest.mark.asyncio
     async def test_list_expenses_success(
         self,
-        client: AsyncClient,
+        client_v1: AsyncClient,
         auth_token_header: dict,
     ) -> None:
         """Test successful expense listing."""
-        group_id = await self._create_group(client, auth_token_header)
-        user_response = await client.get("/users/me", headers=auth_token_header)
+        group_id = await self._create_group(client_v1, auth_token_header)
+        user_response = await client_v1.get("/users/me", headers=auth_token_header)
         user_id = user_response.json()["data"]["user"]["id"]
 
         # Create an expense first
@@ -246,9 +246,9 @@ class TestExpenseAPI:
             "is_payer_included": True,
             "participants_id": [user_id],
         }
-        await self._create_expense(client, auth_token_header, group_id, expense_data)
+        await self._create_expense(client_v1, auth_token_header, group_id, expense_data)
 
-        response = await client.get(f"/groups/{group_id}/expenses", headers=auth_token_header)
+        response = await client_v1.get(f"/groups/{group_id}/expenses", headers=auth_token_header)
 
         assert response.status_code == status.HTTP_200_OK, response.json()
         json_data = response.json()
@@ -264,13 +264,13 @@ class TestExpenseAPI:
     @pytest.mark.asyncio
     async def test_list_expenses_empty(
         self,
-        client: AsyncClient,
+        client_v1: AsyncClient,
         auth_token_header: dict,
     ) -> None:
         """Test listing expenses when no expenses exist."""
-        group_id = await self._create_group(client, auth_token_header)
+        group_id = await self._create_group(client_v1, auth_token_header)
 
-        response = await client.get(f"/groups/{group_id}/expenses", headers=auth_token_header)
+        response = await client_v1.get(f"/groups/{group_id}/expenses", headers=auth_token_header)
 
         assert response.status_code == status.HTTP_200_OK
         json_data = response.json()
@@ -283,12 +283,12 @@ class TestExpenseAPI:
     @pytest.mark.asyncio
     async def test_list_expenses_pagination(
         self,
-        client: AsyncClient,
+        client_v1: AsyncClient,
         auth_token_header: dict,
     ) -> None:
         """Test expense listing with pagination."""
-        group_id = await self._create_group(client, auth_token_header)
-        user_response = await client.get("/users/me", headers=auth_token_header)
+        group_id = await self._create_group(client_v1, auth_token_header)
+        user_response = await client_v1.get("/users/me", headers=auth_token_header)
         user_id = user_response.json()["data"]["user"]["id"]
 
         # Create multiple expenses
@@ -302,10 +302,10 @@ class TestExpenseAPI:
                 "is_payer_included": True,
                 "participants_id": [user_id],
             }
-            await self._create_expense(client, auth_token_header, group_id, expense_data)
+            await self._create_expense(client_v1, auth_token_header, group_id, expense_data)
 
         # Test pagination
-        response = await client.get(
+        response = await client_v1.get(
             f"/groups/{group_id}/expenses?page=1&limit=2",
             headers=auth_token_header,
         )
@@ -323,12 +323,12 @@ class TestExpenseAPI:
     @pytest.mark.asyncio
     async def test_get_expense_detail_success(
         self,
-        client: AsyncClient,
+        client_v1: AsyncClient,
         auth_token_header: dict,
     ) -> None:
         """Test successful expense detail retrieval."""
-        group_id = await self._create_group(client, auth_token_header)
-        user_response = await client.get("/users/me", headers=auth_token_header)
+        group_id = await self._create_group(client_v1, auth_token_header)
+        user_response = await client_v1.get("/users/me", headers=auth_token_header)
         user_id = user_response.json()["data"]["user"]["id"]
 
         # Create an expense first
@@ -341,10 +341,10 @@ class TestExpenseAPI:
             "is_payer_included": True,
             "participants_id": [user_id],
         }
-        create_response = await self._create_expense(client, auth_token_header, group_id, expense_data)
+        create_response = await self._create_expense(client_v1, auth_token_header, group_id, expense_data)
         expense_id = create_response.json()["data"]["expense"]["id"]
 
-        response = await client.get(
+        response = await client_v1.get(
             f"/groups/{group_id}/expenses/{expense_id}",
             headers=auth_token_header,
         )
@@ -365,14 +365,14 @@ class TestExpenseAPI:
     @pytest.mark.asyncio
     async def test_get_expense_detail_not_found(
         self,
-        client: AsyncClient,
+        client_v1: AsyncClient,
         auth_token_header: dict,
     ) -> None:
         """Test expense detail retrieval for non-existent expense."""
-        group_id = await self._create_group(client, auth_token_header)
+        group_id = await self._create_group(client_v1, auth_token_header)
         fake_expense_id = str(uuid.uuid4())
 
-        response = await client.get(
+        response = await client_v1.get(
             f"/groups/{group_id}/expenses/{fake_expense_id}",
             headers=auth_token_header,
         )
@@ -382,12 +382,12 @@ class TestExpenseAPI:
     @pytest.mark.asyncio
     async def test_update_expense_success(
         self,
-        client: AsyncClient,
+        client_v1: AsyncClient,
         auth_token_header: dict,
     ) -> None:
         """Test successful expense update."""
-        group_id = await self._create_group(client, auth_token_header)
-        user_response = await client.get("/users/me", headers=auth_token_header)
+        group_id = await self._create_group(client_v1, auth_token_header)
+        user_response = await client_v1.get("/users/me", headers=auth_token_header)
         user_id = user_response.json()["data"]["user"]["id"]
 
         # Create an expense first
@@ -400,7 +400,7 @@ class TestExpenseAPI:
             "is_payer_included": True,
             "participants_id": [user_id],
         }
-        create_response = await self._create_expense(client, auth_token_header, group_id, expense_data)
+        create_response = await self._create_expense(client_v1, auth_token_header, group_id, expense_data)
         expense_id = create_response.json()["data"]["expense"]["id"]
 
         # Update the expense
@@ -417,7 +417,7 @@ class TestExpenseAPI:
         }
 
         response = await self._update_expense(
-            client,
+            client_v1,
             auth_token_header,
             group_id,
             expense_id,
@@ -437,12 +437,12 @@ class TestExpenseAPI:
     @pytest.mark.asyncio
     async def test_update_expense_not_found(
         self,
-        client: AsyncClient,
+        client_v1: AsyncClient,
         auth_token_header: dict,
     ) -> None:
         """Test expense update for non-existent expense."""
-        group_id = await self._create_group(client, auth_token_header)
-        user_response = await client.get("/users/me", headers=auth_token_header)
+        group_id = await self._create_group(client_v1, auth_token_header)
+        user_response = await client_v1.get("/users/me", headers=auth_token_header)
         user_id = user_response.json()["data"]["user"]["id"]
         fake_expense_id = str(uuid.uuid4())
 
@@ -459,7 +459,7 @@ class TestExpenseAPI:
         }
 
         response = await self._update_expense(
-            client,
+            client_v1,
             auth_token_header,
             group_id,
             fake_expense_id,
@@ -471,12 +471,12 @@ class TestExpenseAPI:
     @pytest.mark.asyncio
     async def test_delete_expense_success(
         self,
-        client: AsyncClient,
+        client_v1: AsyncClient,
         auth_token_header: dict,
     ) -> None:
         """Test successful expense deletion."""
-        group_id = await self._create_group(client, auth_token_header)
-        user_response = await client.get("/users/me", headers=auth_token_header)
+        group_id = await self._create_group(client_v1, auth_token_header)
+        user_response = await client_v1.get("/users/me", headers=auth_token_header)
         user_id = user_response.json()["data"]["user"]["id"]
 
         # Create an expense first
@@ -489,11 +489,11 @@ class TestExpenseAPI:
             "is_payer_included": True,
             "participants_id": [user_id],
         }
-        create_response = await self._create_expense(client, auth_token_header, group_id, expense_data)
+        create_response = await self._create_expense(client_v1, auth_token_header, group_id, expense_data)
         expense_id = create_response.json()["data"]["expense"]["id"]
 
         # Delete the expense
-        response = await client.delete(
+        response = await client_v1.delete(
             f"/groups/{group_id}/expenses/{expense_id}",
             headers=auth_token_header,
         )
@@ -501,7 +501,7 @@ class TestExpenseAPI:
         assert response.status_code == status.HTTP_204_NO_CONTENT
 
         # Verify the expense is deleted
-        get_response = await client.get(
+        get_response = await client_v1.get(
             f"/groups/{group_id}/expenses/{expense_id}",
             headers=auth_token_header,
         )
@@ -510,14 +510,14 @@ class TestExpenseAPI:
     @pytest.mark.asyncio
     async def test_delete_expense_not_found(
         self,
-        client: AsyncClient,
+        client_v1: AsyncClient,
         auth_token_header: dict,
     ) -> None:
         """Test expense deletion for non-existent expense."""
-        group_id = await self._create_group(client, auth_token_header)
+        group_id = await self._create_group(client_v1, auth_token_header)
         fake_expense_id = str(uuid.uuid4())
 
-        response = await client.delete(
+        response = await client_v1.delete(
             f"/groups/{group_id}/expenses/{fake_expense_id}",
             headers=auth_token_header,
         )
@@ -525,26 +525,26 @@ class TestExpenseAPI:
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
     @pytest.mark.asyncio
-    async def test_expense_operations_unauthorized(self, client: AsyncClient) -> None:
+    async def test_expense_operations_unauthorized(self, client_v1: AsyncClient) -> None:
         """Test all expense operations without authentication."""
         fake_group_id = str(uuid.uuid4())
         fake_expense_id = str(uuid.uuid4())
 
         # Test list expenses
-        response = await client.get(f"/groups/{fake_group_id}/expenses")
+        response = await client_v1.get(f"/groups/{fake_group_id}/expenses")
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
         # Test get expense detail
-        response = await client.get(f"/groups/{fake_group_id}/expenses/{fake_expense_id}")
+        response = await client_v1.get(f"/groups/{fake_group_id}/expenses/{fake_expense_id}")
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
         # Test update expense
-        response = await client.put(
+        response = await client_v1.put(
             f"/groups/{fake_group_id}/expenses/{fake_expense_id}",
             json={"title": "Test"},
         )
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
         # Test delete expense
-        response = await client.delete(f"/groups/{fake_group_id}/expenses/{fake_expense_id}")
+        response = await client_v1.delete(f"/groups/{fake_group_id}/expenses/{fake_expense_id}")
         assert response.status_code == status.HTTP_403_FORBIDDEN
